@@ -29,12 +29,14 @@ import com.android.internal.telephony.cdma.CdmaCallWaitingNotification;
 import com.android.internal.telephony.cdma.CdmaInformationRecords.CdmaDisplayInfoRec;
 import com.android.internal.telephony.cdma.CdmaInformationRecords.CdmaSignalInfoRec;
 import com.android.internal.telephony.cdma.SignalToneUtil;
+import com.android.internal.util.cm.QuietHoursUtils;
 
 import android.app.ActivityManagerNative;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.net.Uri;
@@ -45,6 +47,7 @@ import android.os.SystemProperties;
 import android.os.SystemVibrator;
 import android.os.Vibrator;
 import android.provider.CallLog.Calls;
+import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.PhoneStateListener;
@@ -242,8 +245,8 @@ public class CallNotifier extends Handler
         switch (msg.what) {
             case CallStateMonitor.PHONE_NEW_RINGING_CONNECTION:
                 log("RINGING... (new)");
-                onNewRingingConnection((AsyncResult) msg.obj);
                 mSilentRingerRequested = false;
+                onNewRingingConnection((AsyncResult) msg.obj);
                 break;
 
             case CallStateMonitor.PHONE_INCOMING_RING:
@@ -438,8 +441,6 @@ public class CallNotifier extends Handler
         // - do this before showing the incoming call panel
         startIncomingCallQuery(c);
 
-
-
         // Note we *don't* post a status bar notification here, since
         // we're not necessarily ready to actually show the incoming call
         // to the user.  (For calls in the INCOMING state, at least, we
@@ -450,7 +451,87 @@ public class CallNotifier extends Handler
         // InCallScreen) from the showIncomingCall() method, which runs
         // when the caller-id query completes or times out.
 
+        // Finally, do the Quiet Hours ringer handling
+        String number = c.getAddress();
+        if (QuietHoursUtils.inQuietHours(mApplication, Settings.System.QUIET_HOURS_RINGER)) {
+            if (DBG) log("Incoming call from " + number + " received during Quiet Hours.");
+            // Determine what type of Quiet Hours we are in and act accordingly
+            int muteType = Settings.System.getInt(mApplication.getContentResolver(),
+                    Settings.System.QUIET_HOURS_RINGER,
+                    Settings.System.QUIET_HOURS_RINGER_ALLOW_ALL);
+
+            switch (muteType) {
+                case Settings.System.QUIET_HOURS_RINGER_CONTACTS_ONLY:
+                    if (!isContact(number, false)) {
+                        if (DBG) log("Muting ringer, caller not in contact list");
+                        silenceRinger();
+                    }
+                    break;
+                case Settings.System.QUIET_HOURS_RINGER_FAVORITES_ONLY:
+                    if (!isContact(number, true)) {
+                        if (DBG) log("Muting ringer, caller is not favorite");
+                        silenceRinger();
+                    }
+                    break;
+                case Settings.System.QUIET_HOURS_RINGER_DISABLED:
+                    if (DBG) log("Muting ringer");
+                    silenceRinger();
+                    break;
+            }
+        }
+
         if (VDBG) log("- onNewRingingConnection() done.");
+    }
+
+    private static final String[] FAVORITE_PROJECTION = new String[] {
+        ContactsContract.PhoneLookup.STARRED
+    };
+    private static final String[] CONTACT_PROJECTION = new String[] {
+        ContactsContract.PhoneLookup.NUMBER
+    };
+
+    /**
+     * Helper function used to determine if calling number is from person in the Contacts
+     * Optionally, it can also check if the contact is a 'Starred'or favourite contact
+     */
+    private boolean isContact(String number, boolean checkFavorite) {
+        if (DBG) log("isContact(): checking if " + number + " is in the contact list.");
+
+        Uri lookupUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                Uri.encode(number));
+        Cursor cursor = mApplication.getContentResolver().query(lookupUri,
+                checkFavorite ? FAVORITE_PROJECTION : CONTACT_PROJECTION,
+                ContactsContract.PhoneLookup.NUMBER + "=?",
+                new String[] { number }, null);
+
+        if (cursor == null) {
+            if (DBG) log("Couldn't query contacts provider");
+            return false;
+        }
+
+        try {
+            if (cursor.moveToFirst() && !checkFavorite) {
+                // All we care about is that the number is in the Contacts list
+                if (DBG) log("Number belongs to a contact");
+                return true;
+            }
+
+            // Either no result or we should check for favorite.
+            // In the former case the loop won't be entered.
+            while (!cursor.isAfterLast()) {
+                if (cursor.getInt(cursor.getColumnIndex(
+                        ContactsContract.PhoneLookup.STARRED)) == 1) {
+                    if (DBG) log("Number belongs to a favorite");
+                    return true;
+                }
+                cursor.moveToNext();
+            }
+        } finally {
+            cursor.close();
+        }
+
+        if (DBG) log("A match for the number wasn't found");
+        return false;
     }
 
     /**
@@ -654,7 +735,7 @@ public class CallNotifier extends Handler
      * @param c The new ringing connection.
      */
     private void ringAndNotifyOfIncomingCall(Connection c) {
-        if (PhoneUtils.isRealIncomingCall(c.getState())) {
+        if (PhoneUtils.isRealIncomingCall(c.getState()) && !mSilentRingerRequested) {
             mRinger.ring();
         } else {
             if (VDBG) log("- starting call waiting tone...");
