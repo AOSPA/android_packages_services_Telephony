@@ -34,4 +34,8 @@
     <string name="choose_forward_lookup_provider_title">Choose forward lookup provider</string>
     <string name="choose_people_lookup_provider_title">Choose people lookup provider</string>
     <string name="choose_reverse_lookup_provider_title">Choose reverse lookup provider</string>
+
+    <!-- Call UI in background -->
+    <string name="bg_incall">Incoming call in background</string>
+    <string name="bg_incall_summary">Keep incoming call UI in background when screen is on, show notification and play ringtone only</string>
 </resources>
