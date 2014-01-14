@@ -105,6 +105,9 @@ public class OtaStartupReceiver extends BroadcastReceiver {
                     "  mOtaspMode=" + mOtaspMode);
         }
 
+        Settings.System.putInt(context.getContentResolver(),
+                Settings.System.AOSP_DIALER, 1);
+
         PhoneGlobals globals = PhoneGlobals.getInstanceIfPrimary();
         if (globals == null) {
             if (DBG) Log.d(TAG, "Not primary user, nothing to do.");
