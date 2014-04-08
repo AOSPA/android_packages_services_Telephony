@@ -18,4 +18,15 @@
     <string name="national_roaming">Itinerancia nacional de datos</string>
     <string name="national_roaming_enable">Conectarse a servicios de datos en itinerancia nacional</string>
     <string name="national_roaming_disable">No conectarse a servicios de datos en itinerancia nacional</string>
+    <string name="number_lookup">Busqueda telefónica</string>
+    <string name="enable_forward_lookup_title">Buscar lugares</string>
+    <string name="enable_forward_lookup_summary">Mostrar los lugares cercanos al buscar en el marcador</string>
+    <string name="enable_people_lookup_title">Buscar personas</string>
+    <string name="enable_people_lookup_summary">Mostrar resultados en línea de personas relacionadas al buscar en el marcador</string>
+    <string name="enable_reverse_lookup_title">Buscar desconocidos</string>
+    <string name="enable_reverse_lookup_summary">Buscar información acerca de la persona o el lugar de un número desconocido en las llamadas entrantes</string>
+    <string name="choose_lookup_providers">Elegir proveedores de búsqueda</string>
+    <string name="choose_forward_lookup_provider_title">Proveedor de lugares</string>
+    <string name="choose_people_lookup_provider_title">Proveedor de personas</string>
+    <string name="choose_reverse_lookup_provider_title">Proveedor de desconocidos</string>
 </resources>
