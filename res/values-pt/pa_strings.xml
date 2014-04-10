@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+     Copyright (C) 2014 ParanoidAndroid Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Mobile network settings screen, setting check box name -->
+    <string name="national_roaming">Roaming de dados nacional</string>
+    <!-- Mobile network settings screen, setting summary text when check box is selected -->
+    <string name="national_roaming_enable">Conecte-se a serviços de dados em roaming nacional</string>
+    <!-- Mobile network settings screen, setting summary text when check box is clear -->
+    <string name="national_roaming_disable">Não ligue para os serviços de dados em roaming nacional</string>
+
+    <!-- Number lookup -->
+    <string name="number_lookup">Número de telefone de pesquisa</string>
+    <string name="enable_forward_lookup_title">Pesquisa direta</string>
+    <string name="enable_forward_lookup_summary">Mostrar lugares próximos ao pesquisar no discador</string>
+    <string name="enable_people_lookup_title">Pesquisa de pessoas</string>
+    <string name="enable_people_lookup_summary">Mostrar resultados on-line para as pessoas na busca no discador</string>
+    <string name="enable_reverse_lookup_title">Pesquisa reversa</string>
+    <string name="enable_reverse_lookup_summary">Procure informações sobre a pessoa ou lugar para números desconhecidos sobre as chamadas recebidas</string>
+    <string name="choose_lookup_providers">Escolha de provedores para pesquisa</string>
+    <string name="choose_forward_lookup_provider_title">Escolha de provedor para pesquisa direta</string>
+    <string name="choose_people_lookup_provider_title">Escolha de provedor para pesquisa de pessoas</string>
+    <string name="choose_reverse_lookup_provider_title">Escolha de provedor para pesquisa inversa</string>
+</resources>
