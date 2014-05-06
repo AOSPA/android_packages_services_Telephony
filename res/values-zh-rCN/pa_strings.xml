@@ -34,4 +34,8 @@
     <string name="choose_forward_lookup_provider_title">选择正向搜索供应商</string>
     <string name="choose_people_lookup_provider_title">选择人物搜索供应商</string>
     <string name="choose_reverse_lookup_provider_title">选择反向搜索供应商</string>
+
+    <!-- Call UI in background -->
+    <string name="bg_incall">后台来电</string>
+    <string name="bg_incall_summary">亮屏时, 将来电保持在后台, 仅显示通知和播放铃声</string>
 </resources>
