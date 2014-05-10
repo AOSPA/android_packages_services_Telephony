@@ -29,4 +29,6 @@
     <string name="choose_forward_lookup_provider_title">Proveedor de lugares</string>
     <string name="choose_people_lookup_provider_title">Proveedor de personas</string>
     <string name="choose_reverse_lookup_provider_title">Proveedor de desconocidos</string>
+    <string name="bg_incall">Llamada entrante en segundo plano</string>
+    <string name="bg_incall_summary">Mantiene la interfaz de llamada entrante en segundo plano cuando la pantalla está encendida, muestra una notificación y reproduce el tono de llamada</string>
 </resources>
