@@ -33,4 +33,7 @@
     <string name="choose_forward_lookup_provider_title">Scegli provider ricerca diretta</string>
     <string name="choose_people_lookup_provider_title">Scegli provider ricerca di persone</string>
     <string name="choose_reverse_lookup_provider_title">Scegli provider ricerca inversa</string>
+    <!-- Call UI in background -->
+    <string name="bg_incall">Chiamate in arrivo in background</string>
+    <string name="bg_incall_summary">A schermo acceso, riceverai solo la notifica e suoneria delle chiamate in arrivo</string>
 </resources>
