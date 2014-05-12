@@ -34,4 +34,8 @@
     <string name="choose_forward_lookup_provider_title">Wybierz dostawce wyszukiwania lokacji</string>
     <string name="choose_people_lookup_provider_title">Wybierz dostawce wyszukiwania osób</string>
     <string name="choose_reverse_lookup_provider_title">Wybierz dostawce wyszukiwania odwrotnego</string>
+
+    <!-- Call UI in background -->
+    <string name="bg_incall">Rozmowy przychodzące w tle</string>
+    <string name="bg_incall_summary">Kiedy ekran jest włączony zachowaj rozmowe przychodzącą w tle, pokaż tylko powiadomienie i odtwórz drzwonek</string>
 </resources>
