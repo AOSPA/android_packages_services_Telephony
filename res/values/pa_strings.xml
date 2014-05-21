@@ -38,4 +38,8 @@
     <!-- Call UI in background -->
     <string name="bg_incall">Incoming call in background</string>
     <string name="bg_incall_summary">Keep incoming call UI in background when screen is on, show notification and play ringtone only</string>
+
+    <!-- Vibrate on outgoing call pickup -->
+    <string name="vibrate_outgoing_pickup_title">Vibrate on outgoing call pickup</string>
+    <string name="vibrate_outgoing_pickup_summary">Subtle vibration when an outgoing call is recieved by the other person</string>
 </resources>

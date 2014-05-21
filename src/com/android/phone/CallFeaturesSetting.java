@@ -186,6 +186,7 @@ public class CallFeaturesSetting extends PreferenceActivity
     private static final String BUTTON_CDMA_OPTIONS = "button_cdma_more_expand_key";
 
     private static final String BUTTON_CALL_UI_IN_BACKGROUND = "bg_incall_screen";
+    private static final String BUTTON_VIBRATE_ON_OUTGOING_PICKUP = "button_vibrate_outgoing_pickup";
 
     private static final String VM_NUMBERS_SHARED_PREFERENCES_NAME = "vm_numbers";
 
@@ -286,6 +287,7 @@ public class CallFeaturesSetting extends PreferenceActivity
     private CheckBoxPreference mButtonAutoRetry;
     private CheckBoxPreference mButtonHAC;
     private CheckBoxPreference mButtonCallUiInBackground;
+    private CheckBoxPreference mButtonVibrateOnOutgoingPickup;
     private ListPreference mButtonDTMF;
     private ListPreference mButtonTTY;
     private ListPreference mButtonSipCallOptions;
@@ -513,6 +515,8 @@ public class CallFeaturesSetting extends PreferenceActivity
             return true;
         } else if (preference == mButtonCallUiInBackground) {
             return true;
+        } else if (preference == mButtonVibrateOnOutgoingPickup) {
+            return true;
         } else if (preference == mButtonAutoRetry) {
             android.provider.Settings.Global.putInt(mPhone.getContext().getContentResolver(),
                     android.provider.Settings.Global.CALL_AUTO_RETRY,
@@ -583,6 +587,10 @@ public class CallFeaturesSetting extends PreferenceActivity
         } else if (preference == mButtonCallUiInBackground) {
             Settings.System.putInt(mPhone.getContext().getContentResolver(),
                     Settings.System.CALL_UI_IN_BACKGROUND,
+                    (Boolean) objValue ? 1 : 0);
+        } else if (preference == mButtonVibrateOnOutgoingPickup) {
+            Settings.System.putInt(mPhone.getContext().getContentResolver(),
+                    Settings.System.VIBRATE_ON_OUTGOING_PICKUP,
                     (Boolean) objValue ? 1 : 0);
         } else if (preference == mVoicemailProviders) {
             final String newProviderKey = (String) objValue;
@@ -1561,6 +1569,8 @@ public class CallFeaturesSetting extends PreferenceActivity
         mButtonTTY = (ListPreference) findPreference(BUTTON_TTY_KEY);
         mButtonCallUiInBackground =
                 (CheckBoxPreference) findPreference(BUTTON_CALL_UI_IN_BACKGROUND);
+        mButtonVibrateOnOutgoingPickup =
+                (CheckBoxPreference) findPreference(BUTTON_VIBRATE_ON_OUTGOING_PICKUP);
         mVoicemailProviders = (ListPreference) findPreference(BUTTON_VOICEMAIL_PROVIDER_KEY);
         if (mVoicemailProviders != null) {
             mVoicemailProviders.setOnPreferenceChangeListener(this);
@@ -1628,6 +1638,10 @@ public class CallFeaturesSetting extends PreferenceActivity
 
         if (mButtonCallUiInBackground != null) {
             mButtonCallUiInBackground.setOnPreferenceChangeListener(this);
+        }
+
+        if (mButtonVibrateOnOutgoingPickup != null) {
+            mButtonVibrateOnOutgoingPickup.setOnPreferenceChangeListener(this);
         }
 
         if (!getResources().getBoolean(R.bool.world_phone)) {
@@ -1871,6 +1885,12 @@ public class CallFeaturesSetting extends PreferenceActivity
             int callUiInBackground = Settings.System.getInt(getContentResolver(),
                     Settings.System.CALL_UI_IN_BACKGROUND, 0);
             mButtonCallUiInBackground.setChecked(callUiInBackground != 0);
+        }
+
+        if (mButtonVibrateOnOutgoingPickup != null) {
+            int vibrateOnOutgoingPickup = Settings.System.getInt(getContentResolver(),
+                    Settings.System.VIBRATE_ON_OUTGOING_PICKUP, 0);
+            mButtonVibrateOnOutgoingPickup.setChecked(vibrateOnOutgoingPickup != 0);
         }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(
