@@ -41,5 +41,5 @@
 
     <!-- Vibrate on outgoing call pickup -->
     <string name="vibrate_outgoing_pickup_title">Vibrate on outgoing call pickup</string>
-    <string name="vibrate_outgoing_pickup_summary">Subtle vibration when an outgoing call is recieved by the other person</string>
+    <string name="vibrate_outgoing_pickup_summary">Subtle vibration when an outgoing call is received by the other person</string>
 </resources>
