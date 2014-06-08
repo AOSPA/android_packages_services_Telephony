@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Tria el proveïdor de cerca inversa</string>
   <string name="bg_incall">Trucada entrant en segon pla</string>
   <string name="bg_incall_summary">Mantenir la interfície de trucada entrant en segon pla quan la pantalla estigui encesa, mostrar només una notificació i to de trucada</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrar en trucada sortint</string>
+  <string name="vibrate_outgoing_pickup_summary">Lleugera vibració quan una trucada sortint es rebuda per l\'altra persona</string>
 </resources>

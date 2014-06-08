@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Kies omgekeerde soek verskaffer</string>
   <string name="bg_incall">Inkomende oproepe lui in die agtergrond</string>
   <string name="bg_incall_summary">Hou inkomende operoepe gebruikers koppelvlak in die agtergrond wanneer die skerm aan is, wys net \'n kennisgewing en speel die luitoon</string>
+  <string name="vibrate_outgoing_pickup_title">Vibreer wanneer uitgaande jou oproep geantwoord word</string>
+  <string name="vibrate_outgoing_pickup_summary">Ligte vibrasie wanneer iemand jou oproep antwoord</string>
 </resources>

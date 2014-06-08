@@ -25,11 +25,13 @@
   <string name="enable_people_lookup_title">Wyszukiwanie osób</string>
   <string name="enable_people_lookup_summary">Pokaż wyniki online dla osób podczas wyszukiwania w dialerze</string>
   <string name="enable_reverse_lookup_title">Wyszukiwanie wstecz</string>
-  <string name="enable_reverse_lookup_summary">Wyszukaj informacje o osobie lub miejscu dla nieznanych numerów połączeń przychodzącyh</string>
+  <string name="enable_reverse_lookup_summary">Wyszukaj informacje o osobie lub miejscu dla nieznanych numerów połączeń przychodzących</string>
   <string name="choose_lookup_providers">Wybierz dostawców wyszukiwania</string>
   <string name="choose_forward_lookup_provider_title">Dostawca wyszukiwania naprzód</string>
   <string name="choose_people_lookup_provider_title">Dostawca wyszukiwania osób</string>
   <string name="choose_reverse_lookup_provider_title">Dostawca wyszukiwania wstecz</string>
   <string name="bg_incall">Połączenia przychodzące w tle</string>
   <string name="bg_incall_summary">Nie pokazuj połączenia przychodzącego na pełnym ekranie jeżeli telefon nie jest uśpiony, zamiast tego pokaż powiadomienie i odtwórz dzwonek</string>
+  <string name="vibrate_outgoing_pickup_title">Wibracja, kiedy nawiązywane połączenie zostanie odebrane</string>
+  <string name="vibrate_outgoing_pickup_summary">Delikatna wibracja, kiedy wybierane połączenie zostanie odebrane przez drugą osobę</string>
 </resources>

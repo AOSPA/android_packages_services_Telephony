@@ -16,20 +16,22 @@
      limitations under the License.
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-  <string name="national_roaming">Nemzeti adatroaming</string>
-  <string name="national_roaming_enable">Kapcsolódjon adatszolgáltatáshoz barangoláskor</string>
-  <string name="national_roaming_disable">Ne kapcsolódjon adatszolgáltatáshoz barangoláskor</string>
+  <string name="national_roaming">Országos adatroaming</string>
+  <string name="national_roaming_enable">Kapcsolódjon adatszolgáltatáshoz roaming használatakor</string>
+  <string name="national_roaming_disable">Ne kapcsolódjon adatszolgáltatáshoz roaming használatakor</string>
   <string name="number_lookup">Telefonszám keresés</string>
   <string name="enable_forward_lookup_title">Hely keresés</string>
   <string name="enable_forward_lookup_summary">Közeli helyek megjelenítése a tárcsázóban történő kereséskor</string>
   <string name="enable_people_lookup_title">Személy keresés</string>
-  <string name="enable_people_lookup_summary">Online eredmények megjelenítése a tárcsázóban történő személy kereséskor</string>
+  <string name="enable_people_lookup_summary">Online személyek megjelenítése a tárcsázóban történő kereséskor</string>
   <string name="enable_reverse_lookup_title">Bejövő hívás keresés</string>
   <string name="enable_reverse_lookup_summary">Személy és hely információk megjelenítése bejövő hívás esetén</string>
   <string name="choose_lookup_providers">Válasszon keresési szolgáltatót</string>
   <string name="choose_forward_lookup_provider_title">Válassza ki a hely keresési szolgáltatót</string>
-  <string name="choose_people_lookup_provider_title">Válassza ki az emberek keresési szolgáltatóját</string>
+  <string name="choose_people_lookup_provider_title">Válassza ki a személy keresési szolgáltatót</string>
   <string name="choose_reverse_lookup_provider_title">Válassza ki a bejövő hívás keresés szolgáltatóját</string>
-  <string name="bg_incall">Bejövő hívás a háttérben</string>
-  <string name="bg_incall_summary">Tartsa a bejövő hívást a háttérben, amikor a képernyő be van kapcsolva, mutassa az értesítést, és játsza le a csengőhangot</string>
+  <string name="bg_incall">Bejövő hívás háttérben</string>
+  <string name="bg_incall_summary">Tartsa a bejövő hívást a háttérben, amikor a képernyő be van kapcsolva. Csak az értesítést mutassa, és játssza le a csengőhangot.</string>
+  <string name="vibrate_outgoing_pickup_title">Rezgés kimenő hívás kapcsolásakor</string>
+  <string name="vibrate_outgoing_pickup_summary">Enyhe rezgés, ha a másik fél fogadja a hívást</string>
 </resources>

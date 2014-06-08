@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">选择反向搜索供应商</string>
   <string name="bg_incall">后台来电</string>
   <string name="bg_incall_summary">亮屏时, 将来电保持在后台, 仅显示通知并播放铃声</string>
+  <string name="vibrate_outgoing_pickup_title">电话接通时震动</string>
+  <string name="vibrate_outgoing_pickup_summary">当其他人接听传出呼叫时轻微振动</string>
 </resources>

@@ -18,18 +18,20 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
   <string name="national_roaming">Roaming data nasional</string>
   <string name="national_roaming_enable">Sambungkan ke layanan data ketika roaming nasional</string>
-  <string name="national_roaming_disable">Tidak tersambung ke layanan data ketika roaming nasional</string>
+  <string name="national_roaming_disable">Jangan sambungkan ke layanan data ketika roaming nasional</string>
   <string name="number_lookup">Pencarian nomor telepon</string>
   <string name="enable_forward_lookup_title">Pencarian lanjutan</string>
   <string name="enable_forward_lookup_summary">Tunjukkan tempat terdekat ketika mencari dalam dialer</string>
   <string name="enable_people_lookup_title">Pencarian orang</string>
   <string name="enable_people_lookup_summary">Tampilkan hasil online untuk orang-orang saat melakukan pencarian di dialer</string>
-  <string name="enable_reverse_lookup_title">Pencarian mundur</string>
+  <string name="enable_reverse_lookup_title">Pencarian terbalik</string>
   <string name="enable_reverse_lookup_summary">Cari informasi tentang orang atau tempat untuk panggilan masuk dari nomor yg tidak diketahui</string>
   <string name="choose_lookup_providers">Pilih penyedia pencarian</string>
   <string name="choose_forward_lookup_provider_title">Pilih penyedia pencarian lanjutan</string>
   <string name="choose_people_lookup_provider_title">Pilih penyedia pencarian orang</string>
-  <string name="choose_reverse_lookup_provider_title">Pilih penyedia pencarian mundur</string>
+  <string name="choose_reverse_lookup_provider_title">Pilih penyedia pencarian terbalik</string>
   <string name="bg_incall">Panggilan masuk pada latar belakang</string>
   <string name="bg_incall_summary">Jaga UI panggilan masuk pada latar belakang saat layar menyala, hanya menampilkan notifikasi dan memutar nada dering</string>
+  <string name="vibrate_outgoing_pickup_title">Getar ketika membuat panggilan keluar</string>
+  <string name="vibrate_outgoing_pickup_summary">Getaran halus saat panggilan keluar yang diterima oleh orang lain</string>
 </resources>

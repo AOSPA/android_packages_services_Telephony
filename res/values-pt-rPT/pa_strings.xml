@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Escolher o fornecedor da pesquisa inversa</string>
   <string name="bg_incall">Chamada recebida em fundo</string>
   <string name="bg_incall_summary">Manter a UI da chamada recebida em fundo quando o ecrã está ligado, mostrar notificação e reproduzir tom de chamada apenas</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrar ao atender a chamada</string>
+  <string name="vibrate_outgoing_pickup_summary">Vibração ligeira quando a chamada é atendida pela outra pessoa</string>
 </resources>

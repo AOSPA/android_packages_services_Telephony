@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Kies een reverse lookup provider</string>
   <string name="bg_incall">Inkomende oproep op achtergrond</string>
   <string name="bg_incall_summary">Inkomende oproep UI in achtergrond houden wanneer scherm ingeschakeld is, toon melding en speel ringtone</string>
+  <string name="vibrate_outgoing_pickup_title">Trillen bij opgenomen uitgaande oproep</string>
+  <string name="vibrate_outgoing_pickup_summary">Subtiele trilling wanneer een uitgaande oproep wordt ontvangen door de andere persoon</string>
 </resources>

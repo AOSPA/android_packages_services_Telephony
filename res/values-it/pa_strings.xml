@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Scegli provider ricerca inversa</string>
   <string name="bg_incall">Chiamata in arrivo in background</string>
   <string name="bg_incall_summary">A schermo acceso, le chiamate saranno mantenute in background mostrando solo una notifica, emettendo comunque la suoneria.</string>
+  <string name="vibrate_outgoing_pickup_title">Vibra alla risposta di una chiamata in uscita</string>
+  <string name="vibrate_outgoing_pickup_summary">Leggera vibrazione quando una chiamata in uscita viene ricevuta dall\'altra persona</string>
 </resources>

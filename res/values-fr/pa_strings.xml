@@ -31,5 +31,7 @@
   <string name="choose_people_lookup_provider_title">Choisir l\'annuaire pour les personnes</string>
   <string name="choose_reverse_lookup_provider_title">Choisir l\'annuaire pour la recherche inversée</string>
   <string name="bg_incall">Appel entrant en arrière-plan</string>
-  <string name="bg_incall_summary">Garder l\'interface du téléphone en arrière plan quand l\'écran est allumée, afficher une notification et jouer la sonnerie uniquement</string>
+  <string name="bg_incall_summary">Garder l\'interface du téléphone en arrière plan quand l\'écran est allumé, afficher une notification et jouer la sonnerie uniquement</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrer lors d\'un appel sortant</string>
+  <string name="vibrate_outgoing_pickup_summary">Légère vibration lorsqu\'un appel sortant est reçu par le correspondant</string>
 </resources>

@@ -30,6 +30,8 @@
   <string name="choose_forward_lookup_provider_title">Yakın mekan arama sağlayıcısı seç</string>
   <string name="choose_people_lookup_provider_title">Kişi arama sağlayıcısını seç</string>
   <string name="choose_reverse_lookup_provider_title">Bilinmeyen numara arama sağlayıcısını seç</string>
-  <string name="bg_incall">Arka planda gelen arama</string>
-  <string name="bg_incall_summary">Ekran açıkken gelen aramalar arayüzünü arka planda tut, yanlızca bildirim göster ve zil sesi çal</string>
+  <string name="bg_incall">Gelen aramalar arka planda</string>
+  <string name="bg_incall_summary">Ekran açıkken gelen aramalar arayüzünü arka planda tut, sadece bildirim göster ve zil sesi çal</string>
+  <string name="vibrate_outgoing_pickup_title">Giden arama cevaplandığında titret</string>
+  <string name="vibrate_outgoing_pickup_summary">Bir giden çağrı karşı kişi tarafından alındığında hafifçe titret</string>
 </resources>

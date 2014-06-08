@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">בחר ספק לשיחה מזוהה חכמה</string>
   <string name="bg_incall">שיחה נכנסת ברקע</string>
   <string name="bg_incall_summary">כאשר המסך דלוק אל תקפיץ את מסך השיחה נכנסת אלא הצג התראה ורינגטון בלבד</string>
+  <string name="vibrate_outgoing_pickup_title">רטט בעת מענה לשיחה נכנסת</string>
+  <string name="vibrate_outgoing_pickup_summary">רטט קל בעת מענה על שיחה יוצאת</string>
 </resources>
