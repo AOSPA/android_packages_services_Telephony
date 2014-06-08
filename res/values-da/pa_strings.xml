@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Vælg udbydere af omvendt opslag</string>
   <string name="bg_incall">Indgående opkald i baggrunden</string>
   <string name="bg_incall_summary">Behold indgående opkaldsbrugerflade i baggrunden når skærmen er tændt. Vis kun notifikation og afspil kun ringetone</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrer ved udgående opkald</string>
+  <string name="vibrate_outgoing_pickup_summary">Subtil vibration når et udgående opkald modtages af den anden person</string>
 </resources>

@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Вибрати постачальника зворотнього пошуку</string>
   <string name="bg_incall">Вхідний дзвінок у фоновому режимі</string>
   <string name="bg_incall_summary">Тримати вхідний дзвінок у фоновому режимі коли дисплей включений, показувати повідомлення і грати рінгтон</string>
+  <string name="vibrate_outgoing_pickup_title">Вібрувати при вияві вихідного дзвінка</string>
+  <string name="vibrate_outgoing_pickup_summary">Гостра вібрація, коли вихідний дзвінок отриманий співрозмовником</string>
 </resources>

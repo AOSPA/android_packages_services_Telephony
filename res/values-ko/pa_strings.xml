@@ -26,10 +26,12 @@
   <string name="enable_people_lookup_summary">다이얼 검색 중 온라인 검색 결과 표시</string>
   <string name="enable_reverse_lookup_title">역방향 조회</string>
   <string name="enable_reverse_lookup_summary">알수없는 전화번호 수신시 사람 또는 장소의 정보 조회하기</string>
-  <string name="choose_lookup_providers">조회 제공자 선택</string>
+  <string name="choose_lookup_providers">검색 제공자 선택</string>
   <string name="choose_forward_lookup_provider_title">정방향 조회 제공자 선택</string>
   <string name="choose_people_lookup_provider_title">사람 조회 제공자 선택</string>
   <string name="choose_reverse_lookup_provider_title">역방향 조회 제공자 선택하기</string>
   <string name="bg_incall">수신전화를 백그라운드에서 알림</string>
   <string name="bg_incall_summary">화면이 켜있을 때 전화 인터페이스를 백그라운드에 두고, 알림 표시와 벨소리 재생만 함</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrate on outgoing call pickup</string>
+  <string name="vibrate_outgoing_pickup_summary">Subtle vibration when an outgoing call is received by the other person</string>
 </resources>

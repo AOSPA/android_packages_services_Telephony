@@ -32,4 +32,5 @@
   <string name="choose_reverse_lookup_provider_title">اختر موفر بحث عكسي</string>
   <string name="bg_incall">مكالمة واردة في الخلفية</string>
   <string name="bg_incall_summary">اجعل واجهة المكالمة الواردة في الخلفية عندما تكون الشاشة مشغلة، إظهر تنبيه مع النغمة فقط</string>
+  <string name="vibrate_outgoing_pickup_title">إهتزاز عند الرد على المكالمة</string>
 </resources>

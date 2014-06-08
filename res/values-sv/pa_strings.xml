@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Välj omvänd sökningsleverantör</string>
   <string name="bg_incall">Inkommande samtal i bakgrunden</string>
   <string name="bg_incall_summary">Håll inkommande samtals UI i bakgrunden när skärmen är på, visa notifiering och spela endast ringsingnal</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrera på utgående samtal</string>
+  <string name="vibrate_outgoing_pickup_summary">Subtila vibrationer när ett utgående samtal tas emot av den andra personen</string>
 </resources>

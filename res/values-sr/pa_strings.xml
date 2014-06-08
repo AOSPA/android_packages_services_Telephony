@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Изаберите провајдера за обрнуто проналажење</string>
   <string name="bg_incall">Долазни позив у позадини</string>
   <string name="bg_incall_summary">Када је приликом долазног позива екран укључен, само звони и прикажи нотификацију</string>
+  <string name="vibrate_outgoing_pickup_title">Вибрација када се успостави веза при одлазном позиву</string>
+  <string name="vibrate_outgoing_pickup_summary">Лагана вибрација када је позив прихваћен од стране корисника при одлазном позиву</string>
 </resources>

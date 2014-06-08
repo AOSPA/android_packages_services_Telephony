@@ -31,5 +31,7 @@
   <string name="choose_people_lookup_provider_title">Valitse ihmishaun tarjoaja</string>
   <string name="choose_reverse_lookup_provider_title">Valitse käänteishaun tarjoaja</string>
   <string name="bg_incall">Tuleva puhelu taustalla</string>
-  <string name="bg_incall_summary">Pidä tulevan puhelun käyttöliittymä taustalla kun näyttö on päällä ja näytä ilmoitus ja soita soittoääni</string>
+  <string name="bg_incall_summary">Pidä tulevan puhelun käyttöliittymä taustalla kun näyttö on päällä, näytä ilmoitus ja soita soittoääni</string>
+  <string name="vibrate_outgoing_pickup_title">Värinä kun puheluun vastataan</string>
+  <string name="vibrate_outgoing_pickup_summary">Pieni värinä kun henkilö jolle soitetaan vastaanottaa puhelun</string>
 </resources>

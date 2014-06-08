@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Alegere furnizor pentru căutare inversă</string>
   <string name="bg_incall">Apel în fundal</string>
   <string name="bg_incall_summary">Păstrare interfață apel în fundal când ecranul este pornit, exclusiv afișare notificare și pornire sunet de apel</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrează la răspunsul unui apel efectuat</string>
+  <string name="vibrate_outgoing_pickup_summary">Mică Vibraţie atunci când un apel în ieşire este primit de către cealaltă persoană</string>
 </resources>

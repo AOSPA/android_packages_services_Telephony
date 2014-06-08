@@ -22,7 +22,7 @@
   <string name="number_lookup">ค้นหาหมายเลขโทรศัพท์</string>
   <string name="enable_forward_lookup_title">ค้นหาไปข้างหน้า</string>
   <string name="enable_forward_lookup_summary">แสดงบริเวณใกล้เคียงสถานเมื่อค้นหาในการเรียก</string>
-  <string name="enable_people_lookup_title">ค้นหาคน</string>
+  <string name="enable_people_lookup_title">ค้นหาบุคคล</string>
   <string name="enable_people_lookup_summary">แสดงผลออนไลน์สำหรับคนเมื่อค้นหาในการเรียก</string>
   <string name="enable_reverse_lookup_title">ค้นหาย้อนกลับ</string>
   <string name="enable_reverse_lookup_summary">ค้นหาข้อมูลเกี่ยวกับบุคคลหรือสถานที่สำหรับหมายเลขสายเรียกเข้าที่ไม่ทราบ</string>
@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">เลือกให้บริการค้นหาแบบ reverse</string>
   <string name="bg_incall">โทรเข้ามาในพื้นหลัง</string>
   <string name="bg_incall_summary">ให้หน้าจอเรียกเข้าอยู่เบื้องหลังเมื่อหน้าจอเปิด, แสดงการแจ้งเตือน และเล่นเสียงเรียกเข้าเท่านั้น</string>
+  <string name="vibrate_outgoing_pickup_title">สั่นเมื่อมีการรับสายที่โทรออก</string>
+  <string name="vibrate_outgoing_pickup_summary">สั่นเบาเมื่อมีการรับสายที่โทรออกโดยบุคคลอื่น</string>
 </resources>

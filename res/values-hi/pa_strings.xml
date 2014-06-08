@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">विपरीत खोज के लिए प्रदाता चुनें</string>
   <string name="bg_incall">आया हुआ कॉल बैकग्राउंड में हैं</string>
   <string name="bg_incall_summary">आईहुई कॉल की उपभोक्ता इंटरफ़ेस को बैकग्राउंड में रखे जबकि स्क्रीन चालू हो, सूचना दिखाएँ और सिर्फ ध्वनि बजांयें</string>
+  <string name="vibrate_outgoing_pickup_title">निवर्तमान कॉल पिक पर कंपन</string>
+  <string name="vibrate_outgoing_pickup_summary">एक निवर्तमान कॉल अन्य व्यक्ति द्वारा प्राप्त होता है जब सूक्ष्म कंपन</string>
 </resources>

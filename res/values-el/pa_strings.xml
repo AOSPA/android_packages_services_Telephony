@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Πάροχος αντίστροφης αναζήτησης</string>
   <string name="bg_incall">Εισερχόμενη κλήση στο παρασκήνιο</string>
   <string name="bg_incall_summary">Κρατάει την εισερχόμενη κλήση στο παρασκήνιο, όταν η οθόνη είναι ενεργή, εμφανίζει ειδοποίηση και παίζει μόνο τον ήχο κλήσης</string>
+  <string name="vibrate_outgoing_pickup_title">Δόνηση στην αποδοχή εξερχόμενης κλήσης</string>
+  <string name="vibrate_outgoing_pickup_summary">Ελαφριά δόνηση όταν ο άλλος χρήστης δέχεται μια εξερχόμενη κλήση</string>
 </resources>

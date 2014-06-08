@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Zvolit poskytovatele zpětného vyhledávání</string>
   <string name="bg_incall">Příchozí hovor na pozadí</string>
   <string name="bg_incall_summary">V případě zapnutého displeje držet UI příchozího hovoru na pozadí, pouze zobrazit notifikaci a přehrát vyzvánění</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrace při přijetí hovoru volaným</string>
+  <string name="vibrate_outgoing_pickup_summary">Jemná vibrace když odchozí hovor přijme jiná osoba</string>
 </resources>

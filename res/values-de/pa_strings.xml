@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Anbieter für die Rückwärtssuche auswählen</string>
   <string name="bg_incall">Eingehender Anruf im Hintergrund</string>
   <string name="bg_incall_summary">Die Einkommender-Anruf-Übersicht im Hintergrund lassen, wenn der Bildschirm eingeschaltet ist. Nur eine Benachrichtigung anzeigen und den Klingelton abspielen</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrieren, wenn der abgehende Anruf angenommen wird</string>
+  <string name="vibrate_outgoing_pickup_summary">Leichte Vibration, wenn ein ausgehender Anruf von der anderen Person angenommen wird</string>
 </resources>

@@ -29,7 +29,9 @@
   <string name="choose_lookup_providers">検索プロバイダを選択</string>
   <string name="choose_forward_lookup_provider_title">正引き検索のプロバイダを選択</string>
   <string name="choose_people_lookup_provider_title">人物検索のプロバイダを選択</string>
-  <string name="choose_reverse_lookup_provider_title">逆引き検索の検索プロバイダを選択</string>
-  <string name="bg_incall">着信画面をバックグラウンドで表示</string>
-  <string name="bg_incall_summary">画面がONの時は着信画面をバックグラウンドにし、通知の表示と着信音の再生のみ行うようにする</string>
+  <string name="choose_reverse_lookup_provider_title">逆引き検索のプロバイダを選択</string>
+  <string name="bg_incall">バックグラウンドで着信</string>
+  <string name="bg_incall_summary">画面がONの時は着信をバックグラウンドにして、通知の表示と着信音の再生のみ行うようにする</string>
+  <string name="vibrate_outgoing_pickup_title">受信時のバイブレーション</string>
+  <string name="vibrate_outgoing_pickup_summary">発信相手の受信をバイブレーションで通知する</string>
 </resources>
