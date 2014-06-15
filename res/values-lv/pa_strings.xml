@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Izvēlēties apgriezto pakalpojumu pasniedzēju uzmeklēšanu</string>
   <string name="bg_incall">Ienākošs zvans fonā</string>
   <string name="bg_incall_summary">Paturēt ienākošo zvanu UI fonā kad ekrāns ir ieslēgts, parādīt tikai paziņojumu un atskaņot zvana toni</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrēt kad tiek pieņemts izejošais zvans</string>
+  <string name="vibrate_outgoing_pickup_summary">Vāja vibrācija kad izejošo zvanu saņem otra persona</string>
 </resources>

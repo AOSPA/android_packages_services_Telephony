@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Velg tilbyder for oppslag av ukjente numre</string>
   <string name="bg_incall">Innkommende anrop i bakgrunnen</string>
   <string name="bg_incall_summary">Hold innkommende samtale i bakgrunnen når skjermen er på, vis kun varsling og spill av ringetone</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrér ved svar av samtale</string>
+  <string name="vibrate_outgoing_pickup_summary">Lett vibrering når samtalen svares av mottaker</string>
 </resources>

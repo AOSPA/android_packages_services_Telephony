@@ -33,5 +33,5 @@
   <string name="bg_incall">Llamada entrante en segundo plano</string>
   <string name="bg_incall_summary">Mantiene la interfaz de llamada entrante en segundo plano cuando la pantalla está encendida. Sólo suena y muestra una notificación</string>
   <string name="vibrate_outgoing_pickup_title">Vibrar en llamada saliente</string>
-  <string name="vibrate_outgoing_pickup_summary">Sutil vibración cuando una llamada es recibida por la otra persona</string>
+  <string name="vibrate_outgoing_pickup_summary">Vibrar sutilmente cuando la otra persona descuelga el teléfono</string>
 </resources>

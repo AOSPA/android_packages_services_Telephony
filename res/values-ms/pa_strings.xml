@@ -33,5 +33,5 @@
   <string name="bg_incall">Panggilan yang masuk di latar belakang</string>
   <string name="bg_incall_summary">Terus panggilan masuk UI di latar belakang apabila skrin, Tunjukkan pemberitahuan dan bermain ringtone sahaja</string>
   <string name="vibrate_outgoing_pickup_title">Bergetar semasa panggilan keluar diangkat</string>
-  <string name="vibrate_outgoing_pickup_summary">Getaran halus apabila panggilan anda diterima oleh orang lain</string>
+  <string name="vibrate_outgoing_pickup_summary">Getaran halus apabila panggilan anda diterima</string>
 </resources>

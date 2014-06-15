@@ -17,21 +17,21 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
   <string name="national_roaming">נדידת נתונים לאומית</string>
-  <string name="national_roaming_enable">התחבר לשירותי רשת נתונים כאשר בנדידת נתונים לאומית</string>
-  <string name="national_roaming_disable">אל תתחבר לשירותי רשת נתונים כאשר בנדידת נתונים לאומית</string>
+  <string name="national_roaming_enable">התחבר לשירותי נתונים כאשר במצב \"נדידת נתונים לאומית\"</string>
+  <string name="national_roaming_disable">אל תתחבר לשירותי נתונים כאשר במצב \"נדידת נתונים לאומית\"</string>
   <string name="number_lookup">חיפוש מספר טלפון</string>
   <string name="enable_forward_lookup_title">חיפוש מקדים</string>
-  <string name="enable_forward_lookup_summary">הצג מקומות באזור שלך בעת חיפוש בחייגן</string>
+  <string name="enable_forward_lookup_summary">הצג מקומות סמוכים בעת חיפוש בחייגן</string>
   <string name="enable_people_lookup_title">חיפוש אנשים</string>
   <string name="enable_people_lookup_summary">הצג תוצאות מהרשת עבור אנשים בעת חיפוש בחייגן</string>
   <string name="enable_reverse_lookup_title">שיחה מזוהה חכמה</string>
-  <string name="enable_reverse_lookup_summary">מחפש מידע על בן אדם או מקום בעלי מספר לא מזוהה בשיחות נכנסות</string>
+  <string name="enable_reverse_lookup_summary">חפש מידע על אנשים או מקומות כאשר מספר לא מזוהה מתקשר</string>
   <string name="choose_lookup_providers">בחר ספקי חיפוש</string>
   <string name="choose_forward_lookup_provider_title">בחר ספק לחיפוש מקדים</string>
   <string name="choose_people_lookup_provider_title">בחר ספק לחיפוש אנשים</string>
   <string name="choose_reverse_lookup_provider_title">בחר ספק לשיחה מזוהה חכמה</string>
   <string name="bg_incall">שיחה נכנסת ברקע</string>
-  <string name="bg_incall_summary">כאשר המסך דלוק אל תקפיץ את מסך השיחה נכנסת אלא הצג התראה ורינגטון בלבד</string>
+  <string name="bg_incall_summary">כאשר המסך דלוק אל תקפיץ את מסך \"שיחה נכנסת\" אלא הצג התראה ורינגטון בלבד</string>
   <string name="vibrate_outgoing_pickup_title">רטט בעת מענה לשיחה נכנסת</string>
   <string name="vibrate_outgoing_pickup_summary">רטט קל בעת מענה על שיחה יוצאת</string>
 </resources>

@@ -24,14 +24,14 @@
   <string name="enable_forward_lookup_summary">Vis steder i nærheden, når der søges i opkaldsprogrammet</string>
   <string name="enable_people_lookup_title">Personopslag</string>
   <string name="enable_people_lookup_summary">Vis onlineresultater for personer, når der søges i opkaldsprogrammet</string>
-  <string name="enable_reverse_lookup_title">Omvendt opslag</string>
+  <string name="enable_reverse_lookup_title">Opslag af ukendte numre</string>
   <string name="enable_reverse_lookup_summary">Slå information om personen eller stedet op for ukendte numre ved indgående opkald</string>
   <string name="choose_lookup_providers">Vælg opslagsudbydere</string>
-  <string name="choose_forward_lookup_provider_title">Vælg udbyder af videre opslag</string>
+  <string name="choose_forward_lookup_provider_title">Vælg udbyder ved opslag af steder</string>
   <string name="choose_people_lookup_provider_title">Vælg personopslagsudbyder</string>
-  <string name="choose_reverse_lookup_provider_title">Vælg udbydere af omvendt opslag</string>
+  <string name="choose_reverse_lookup_provider_title">Vælg udbyder ved opslag af ukendte numre</string>
   <string name="bg_incall">Indgående opkald i baggrunden</string>
-  <string name="bg_incall_summary">Behold indgående opkaldsbrugerflade i baggrunden når skærmen er tændt. Vis kun notifikation og afspil kun ringetone</string>
+  <string name="bg_incall_summary">Behold indgående opkaldsbrugerflade i baggrunden, når skærmen er tændt. Vis kun notifikation og afspil kun ringetone</string>
   <string name="vibrate_outgoing_pickup_title">Vibrer ved udgående opkald</string>
-  <string name="vibrate_outgoing_pickup_summary">Subtil vibration når et udgående opkald modtages af den anden person</string>
+  <string name="vibrate_outgoing_pickup_summary">Diskret vibration, når et udgående opkald modtages af den anden person</string>
 </resources>
