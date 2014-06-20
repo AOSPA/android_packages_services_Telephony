@@ -32,4 +32,6 @@
   <string name="choose_reverse_lookup_provider_title">Elegir proveedor para búsqueda inversa</string>
   <string name="bg_incall">Llamada entrante en segundo plano</string>
   <string name="bg_incall_summary">Mantener la interfaz de llamada entrante en segundo plano cuando la pantalla esté encendida, mostrar notificación y reproducir tono de llamada únicamente</string>
+  <string name="vibrate_outgoing_pickup_title">Vibrar en llamada saliente</string>
+  <string name="vibrate_outgoing_pickup_summary">Vibrar sutilmente cuando la llamada es recibida por la otra persona</string>
 </resources>
