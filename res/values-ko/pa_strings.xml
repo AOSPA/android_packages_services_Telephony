@@ -30,8 +30,8 @@
   <string name="choose_forward_lookup_provider_title">정방향 검색 제공자 선택</string>
   <string name="choose_people_lookup_provider_title">인물 검색 제공자 선택</string>
   <string name="choose_reverse_lookup_provider_title">역방향 검색 제공자 선택</string>
-  <string name="bg_incall">수신전화를 백그라운드에서 알림</string>
-  <string name="bg_incall_summary">화면이 켜져 있을 때 수신전화 화면을 백그라운드에 두고 벨소리와 알림만 표시합니다.</string>
-  <string name="vibrate_outgoing_pickup_title">상대방이 전화를 받았을 때 진동</string>
+  <string name="bg_incall">전화 수신을 백그라운드에서 알림</string>
+  <string name="bg_incall_summary">화면이 켜져 있을 때 전화 수신 화면을 백그라운드에 두고 벨소리와 알림만 표시합니다.</string>
+  <string name="vibrate_outgoing_pickup_title">상대방이 전화를 받으면 진동</string>
   <string name="vibrate_outgoing_pickup_summary">상대방이 전화를 수신했을 때 약하게 진동합니다.</string>
 </resources>

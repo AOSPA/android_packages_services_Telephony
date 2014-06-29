@@ -17,8 +17,8 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
   <string name="national_roaming">Nasjonal dataroaming</string>
-  <string name="national_roaming_enable">Koble til datatjenester under nasjonal roaming</string>
-  <string name="national_roaming_disable">Ikke koble til datatjenester under nasjonal roaming</string>
+  <string name="national_roaming_enable">Koble til datatjenester ved nasjonal roaming</string>
+  <string name="national_roaming_disable">Ikke koble til datatjenester ved nasjonal roaming</string>
   <string name="number_lookup">Telefonnummersøk</string>
   <string name="enable_forward_lookup_title">Stedsoppslag</string>
   <string name="enable_forward_lookup_summary">Vis nærliggende steder ved søk i oppringeren</string>
@@ -27,7 +27,7 @@
   <string name="enable_reverse_lookup_title">Oppslag av ukjente numre</string>
   <string name="enable_reverse_lookup_summary">Hent informasjon om person eller sted for ukjente innkommende samtaler</string>
   <string name="choose_lookup_providers">Velg tilbyder av oppslag</string>
-  <string name="choose_forward_lookup_provider_title">Velg tilbyder for videre oppslag</string>
+  <string name="choose_forward_lookup_provider_title">Velg tilbyder for stedoppslag</string>
   <string name="choose_people_lookup_provider_title">Velg tilbyder for oppslag av personer</string>
   <string name="choose_reverse_lookup_provider_title">Velg tilbyder for oppslag av ukjente numre</string>
   <string name="bg_incall">Innkommende anrop i bakgrunnen</string>
