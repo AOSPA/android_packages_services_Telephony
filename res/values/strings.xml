@@ -466,7 +466,7 @@
     <!-- In-call screen: status label for an incoming call that is not answered and forwarded  -->
     <string name="callUnanswered_forwarded">Call Unanswered and Forwarded</string>
 
-    <string-array name="preferred_network_mode_choices">
+    <string-array name="preferred_network_mode_choices" translatable="false">
         <item>LTE/TDSCDMA/CDMA/EVDO/GSM/WCDMA </item>
         <item>TDSCDMA/CDMA/EVDO/GSM/WCDMA </item>
         <item>LTE/TDSCDMA/GSM/WCDMA</item>
