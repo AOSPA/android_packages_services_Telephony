@@ -423,16 +423,6 @@ public class TelephonyConnectionService extends ConnectionService {
             TelephonyConnection connection, Phone phone, ConnectionRequest request) {
         String number = connection.getAddress().getSchemeSpecificPart();
 
-        PhoneAccountHandle pHandle = PhoneUtils.makePstnPhoneAccountHandle(phone);
-        // For ECall handling on MSIM, till the request reaches here(i.e PhoneApp)
-        // we dont know on which phone account ECall can be placed, once after deciding
-        // the phone account for ECall we should inform Telecomm so that
-        // the proper sub information will be displayed on InCallUI.
-        if (!Objects.equals(pHandle, request.getAccountHandle())) {
-            Log.i(this, "setPhoneAccountHandle, account = " + pHandle);
-            connection.setPhoneAccountHandle(pHandle);
-        }
-
         Bundle bundle = request.getExtras();
         boolean isAddParticipant = (bundle != null) && bundle
                 .getBoolean(TelephonyProperties.ADD_PARTICIPANT_KEY, false);
