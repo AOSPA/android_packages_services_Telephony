@@ -547,7 +547,12 @@ final class TelecomAccountRegistry {
                         provisionStatus = INVALID_STATE;
                         Log.w(this, "Failed to get status , slotId: "+ slotId +" Exception: " + ex);
                     }
+
+                    if (provisionStatus == INVALID_STATE) {
+                        provisionStatus = PROVISIONED;
+                    }
                 }
+
                 Log.d(this, "Phone with subscription id: " + subscriptionId +
                         " slotId: " + slotId + " provisionStatus: " + provisionStatus);
                 if ((subscriptionId >= 0) && (provisionStatus == PROVISIONED)) {
