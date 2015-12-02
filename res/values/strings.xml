@@ -1496,12 +1496,6 @@
     <string name="exportAllcontatsNoContacts"> No Contacts found to export to SIM !!!</string>
     <string name="cursorError"> Cursor is not having proper data !!! </string>
 
-     <!-- XDivert Settings -->
-     <!-- Title for the XDivert Feature displayed in Call Settings -->
-     <string name="xdivert_title">X-Divert</string>
-     <!-- Summary for the XDivert Feature displayed in Call Settings -->
-     <string name="xdivert_summary">CFNRc Settings</string>
-
     <string name="CFActivate">Activate</string>
     <string name="CFDeactivate">Deactivate</string>
     <string name="null_phone_number">Phone number cannot be null !</string>
