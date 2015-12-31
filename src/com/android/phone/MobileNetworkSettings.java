@@ -1440,13 +1440,18 @@ public class MobileNetworkSettings extends PreferenceActivity
     }
 
     private boolean isSupportTdscdma() {
-        if (getResources().getBoolean(R.bool.config_support_tdscdma)) {
+        final int subId = mPhone.getSubId();
+        if (SubscriptionManager.getResourcesForSubId(this, subId)
+                .getBoolean(R.bool.config_support_tdscdma)) {
+            log("Supports Tdscdma, subId " + subId);
             return true;
         }
 
         String operatorNumeric = mPhone.getServiceState().getOperatorNumeric();
-        String[] numericArray = getResources().getStringArray(
+        String[] numericArray =
+                SubscriptionManager.getResourcesForSubId(this, subId).getStringArray(
                 R.array.config_support_tdscdma_roaming_on_networks);
+        log("isSupportTdscdma, operatorNumeric " + operatorNumeric + " subId " + subId);
         if (numericArray.length == 0 || operatorNumeric == null) {
             return false;
         }
