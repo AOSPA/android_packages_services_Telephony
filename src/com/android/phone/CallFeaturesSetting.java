@@ -270,6 +270,12 @@ public class CallFeaturesSetting extends PreferenceActivity
                     if (carrierConfig.getBoolean(
                                 CarrierConfigManager.KEY_CDMA_CW_CF_ENABLED_BOOL)) {
                         Log.d(LOG_TAG, "Enabled CW CF");
+                        PreferenceScreen prefCF = (PreferenceScreen)
+                                prefSet.findPreference("button_cf_expand_key");
+                        if (prefCF != null) {
+                            prefCF.getIntent().putExtra(PhoneConstants.SUBSCRIPTION_KEY,
+                                    mPhone.getSubId());
+                        }
                         CdmaCallOptions.initCallWaitingPref(this, mPhone.getPhoneId());
                     } else {
                         Log.d(LOG_TAG, "Disabled CW CF");

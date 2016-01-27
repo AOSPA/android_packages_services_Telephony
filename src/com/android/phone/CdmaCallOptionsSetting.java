@@ -38,6 +38,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.telephony.CommandsInterface;
+import com.android.internal.telephony.SubscriptionController;
 
 /**
  * Container of transaction settings. Instances of this class are contained within Transaction
@@ -64,7 +65,7 @@ public class CdmaCallOptionsSetting {
     private int mType;
     private int mCategory;
 
-    private int mPhoneId;
+    private int mSubId;
 
     private static final String NUM_PROJECTION[] = {
             NUMBER,
@@ -82,12 +83,12 @@ public class CdmaCallOptionsSetting {
      *
      * @param context The context of the Cdma Call Option Client
      */
-    public CdmaCallOptionsSetting(Context context, int type, int category, int phoneId) {
+    public CdmaCallOptionsSetting(Context context, int type, int category, int subId) {
 
         mType = type;
         mCategory = category;
 
-        mPhoneId = phoneId;
+        mSubId = subId;
 
         String optionSelection = getOptionSelection();
         if (optionSelection == null) {
@@ -139,8 +140,8 @@ public class CdmaCallOptionsSetting {
         return selection.toString();
     }
 
-    public CdmaCallOptionsSetting(Context context, int type, int subscription) {
-        this(context, type, -1, subscription);
+    public CdmaCallOptionsSetting(Context context, int type, int subId) {
+        this(context, type, -1, subId);
     }
 
     public CdmaCallOptionsSetting(int type, int category, String actNum, String deactNum) {
@@ -160,9 +161,10 @@ public class CdmaCallOptionsSetting {
 
     private String getOperatorNumeric() {
         String numeric;
-        numeric = TelephonyManager.getDefault().getSimOperator(mPhoneId);
+        numeric = TelephonyManager.getDefault().getSimOperator(mSubId);
         if (DEBUG) {
-            Log.d(TAG, "numeric: " + numeric + " mSubscription: " + mPhoneId);
+            Log.d(TAG, "numeric: " + numeric + " mSubscription: " + mSubId
+                    + "phoneId" + SubscriptionController.getInstance().getPhoneId(mSubId));
         }
         return numeric;
     }

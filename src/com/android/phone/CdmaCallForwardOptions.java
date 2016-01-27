@@ -15,6 +15,7 @@ import android.preference.PreferenceActivity;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.MenuItem;
@@ -22,6 +23,7 @@ import android.view.MenuItem;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneFactory;
+import com.android.internal.telephony.SubscriptionController;
 
 import java.util.ArrayList;
 
@@ -65,7 +67,7 @@ public class CdmaCallForwardOptions extends PreferenceActivity {
             new ArrayList<PreferenceScreen>();
 
     private boolean mFirstResume;
-    private int mPhoneId = 0;
+    private int mSubId = 0;
     private PhoneAccountHandle mAccountHandle;
 
     @Override
@@ -75,8 +77,9 @@ public class CdmaCallForwardOptions extends PreferenceActivity {
         addPreferencesFromResource(R.xml.callforward_cdma_options);
 
         // getting selected subscription
-        mPhoneId = getIntent().getIntExtra(PhoneConstants.SUBSCRIPTION_KEY, 0);
-        Log.d(LOG_TAG, "Inside CF options, Getting subscription =" + mPhoneId);
+        mSubId = getIntent().getIntExtra(PhoneConstants.SUBSCRIPTION_KEY,
+                SubscriptionManager.DEFAULT_SUBSCRIPTION_ID);
+        Log.d(LOG_TAG, "Inside CF options, Getting subscription = " + mSubId);
 
         PreferenceScreen prefSet = getPreferenceScreen();
 
@@ -114,12 +117,13 @@ public class CdmaCallForwardOptions extends PreferenceActivity {
     public void onResume() {
         super.onResume();
         if (mFirstResume) {
-            mAccountHandle = PhoneGlobals.getPhoneAccountHandle(this, mPhoneId);
+            int phoneId = SubscriptionController.getInstance().getPhoneId(mSubId);
+            mAccountHandle = PhoneGlobals.getPhoneAccountHandle(this, phoneId);
             for (int i = CommandsInterface.CF_REASON_UNCONDITIONAL;
                     i < CommandsInterface.CF_REASON_ALL_CONDITIONAL; i++) {
                 mCallOptionSettings = new CdmaCallOptionsSetting(this, i, CATEGORY_NORMAL,
-                        mPhoneId);
-                initChildPreference(i);
+                        mSubId);
+                initChildPreference(i, phoneId);
                 setChildPreference(i);
                 if (DBG) Log.d(LOG_TAG, "call option on type: " + i + " Getting deact num ="
                         + mCallOptionSettings.getDeactivateNumber());
@@ -128,9 +132,9 @@ public class CdmaCallForwardOptions extends PreferenceActivity {
         }
     }
 
-    private void initChildPreference(int index) {
+    private void initChildPreference(int index, int phoneId) {
         if ((mPreferences != null) && (index < mPreferences.size())) {
-            mPreferences.get(index).init(this, mPhoneId, mCallOptionSettings
+            mPreferences.get(index).init(this, phoneId, mCallOptionSettings
                     .getActivateNumber());
         }
     }

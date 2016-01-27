@@ -16,9 +16,6 @@
 
 package com.android.phone;
 
-import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneConstants;
-
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -37,6 +34,10 @@ import android.telephony.CarrierConfigManager;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 import android.view.MenuItem;
+
+import com.android.internal.telephony.Phone;
+import com.android.internal.telephony.PhoneConstants;
+import com.android.internal.telephony.SubscriptionController;
 
 public class CdmaCallOptions extends PreferenceActivity {
     private static final String LOG_TAG = "CdmaCallOptions";
@@ -92,6 +93,11 @@ public class CdmaCallOptions extends PreferenceActivity {
             }
         } else {
             Log.d(LOG_TAG, "Enabled CW CF");
+            PreferenceScreen prefCF = (PreferenceScreen)
+                    prefScreen.findPreference("button_cf_expand_key");
+            if (prefCF != null) {
+                prefCF.getIntent().putExtra(PhoneConstants.SUBSCRIPTION_KEY, phone.getSubId());
+            }
             initCallWaitingPref(this, phone.getPhoneId());
         }
     }
@@ -103,7 +109,7 @@ public class CdmaCallOptions extends PreferenceActivity {
                 activity.findPreference("button_cw_deact_key");
 
         CdmaCallOptionsSetting callOptionSettings = new CdmaCallOptionsSetting(activity,
-                CALL_WAITING, phoneId);
+                CALL_WAITING, SubscriptionController.getInstance().getSubIdUsingPhoneId(phoneId));
 
         PhoneAccountHandle accountHandle = PhoneGlobals.getPhoneAccountHandle(activity, phoneId);
         prefCWAct.getIntent()
