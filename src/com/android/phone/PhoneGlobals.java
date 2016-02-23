@@ -261,8 +261,9 @@ public class PhoneGlobals extends ContextWrapper {
                         // Normal case: show the "SIM network unlock" PIN entry screen.
                         // The user won't be able to do anything else until
                         // they enter a valid SIM network PIN.
+                        int subtype = (Integer)((AsyncResult)msg.obj).result;
                         Log.i(LOG_TAG, "show sim depersonal panel");
-                        IccNetworkDepersonalizationPanel.showDialog();
+                        IccNetworkDepersonalizationPanel.showDialog(subtype);
                     }
                     break;
 
