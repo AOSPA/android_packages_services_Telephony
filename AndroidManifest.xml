@@ -411,6 +411,15 @@
             </intent-filter>
         </activity>
 
+        <activity android:name="CallForwardType"
+                android:label="@string/call_forward_option"
+                android:configChanges="orientation|screenSize|keyboardHidden"
+                android:theme="@style/SettingsLight">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
         <activity android:name="CellBroadcastSms"
             android:label="@string/cell_broadcast_sms"
             android:theme="@android:style/Theme.Holo.DialogWhenLarge">
@@ -715,6 +724,16 @@
               <data android:scheme="package"/>
           </intent-filter>
        </receiver>
+
+       <activity
+           android:name="CdmaCallForwardOptions"
+           android:configChanges="orientation|screenSize|keyboardHidden"
+           android:theme="@style/SettingsLight"
+           android:label="@string/labelCF" >
+           <intent-filter>
+               <action android:name="android.intent.action.MAIN" />
+           </intent-filter>
+       </activity>
 
        <activity
            android:name="ManagedRoaming"

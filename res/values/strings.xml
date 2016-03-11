@@ -121,6 +121,9 @@
     <!-- GSM Call settings screen, setting option name with label indicating the SIM the settings
          are applied to. [CHAR LIMIT=40] -->
     <string name="labelGsmMore_with_label">GSM call settings (<xliff:g id="subscriptionlabel" example="T-Mobile">%s</xliff:g>)</string>
+    <string name="labelCFType">Call Forward Setting</string>
+    <string name="labelCFVoice">Voice</string>
+    <string name="labelCFVideo">Video</string>
     <!-- CDMA Call settings screen, setting option name -->
     <string name="labelCDMAMore">CDMA call settings</string>
     <!-- CDMA Call settings screen, setting option name with label indicating the SIM the settings
@@ -260,6 +263,7 @@
 
     <!-- Call forwarding settings screen, setting option name -->
     <string name="labelCFNRc">When unreachable</string>
+    <string name="labelCFNRc_cdma">Forward Implicitly</string>
     <!-- Call forwarding dialog box, text field label -->
     <string name="messageCFNRc">Number when unreachable</string>
     <!-- Call forwarding settings screen, setting summary text when forwarding to a specific number when unreachable-->
@@ -516,6 +520,7 @@
     <string name=" hide_error_from_network_text">Unable to Process Request</string>
 
     <string name="gsm_umts_options">GSM/UMTS Options</string>
+    <string name="call_forward_option">CallForward Options</string>
     <string name="cdma_options">CDMA Options</string>
 
     <string name="call_barring">Call barring</string>
@@ -918,6 +923,7 @@
     <string name="pin2_or_fdn_invalid">FDN wasn\'t updated. The PIN2 was incorrect, or the phone number was rejected.</string>
     <!-- FDN settings: error message displayed in a popup (toast) -->
     <string name="fdn_failed">FDN operation failed.</string>
+    <string name="fdn_service_unavailable">FDN service is not available.</string>
 
     <!-- ADN related strings -->
     <!-- Placeholder text displayed while loading the list of SIM contacts -->
@@ -1496,4 +1502,8 @@
      <!-- Summary for the XDivert Feature displayed in Call Settings -->
      <string name="xdivert_summary">CFNRc Settings</string>
 
+    <string name="CFActivate">Activate</string>
+    <string name="CFDeactivate">Deactivate</string>
+    <string name="null_phone_number">Phone number cannot be null !</string>
+    <string name="labelCFDeactAll">Deactivate All</string>
 </resources>

@@ -120,7 +120,7 @@ public class ManagedRoaming extends Activity {
                     Intent networkSettingIntent = new Intent(Intent.ACTION_MAIN);
                     networkSettingIntent.setClassName("com.android.phone",
                             "com.android.phone.NetworkSetting");
-                    networkSettingIntent.putExtra(SUBSCRIPTION_KEY, mSubscription);
+                    networkSettingIntent.putExtra(GsmUmtsOptions.EXTRA_SUB_ID, mSubscription);
                     startActivityForResult(networkSettingIntent,
                             NETWORK_SCAN_ACTIVITY_REQUEST_CODE);
                     break;

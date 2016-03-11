@@ -132,6 +132,11 @@ public class PhoneUtils {
      * the dialog theme correctly.
      */
     private static final int THEME = AlertDialog.THEME_DEVICE_DEFAULT_LIGHT;
+    /** Define serviceClass type for CallForward */
+    public static final int SERVICE_CLASS_VOICE = 1;
+    public static final int SERVICE_CLASS_VIDEO = 2;
+    /** Extra key to identify the service class voice or video */
+    public static final String SERVICE_CLASS = "service_class";
 
     private static class FgRingCalls {
         private Call fgCall;

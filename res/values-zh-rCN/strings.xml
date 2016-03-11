@@ -112,6 +112,7 @@
     <string name="sum_cfnry_disabled" msgid="3884684060443538097">"关闭"</string>
     <string name="disable_cfnry_forbidden" msgid="4308233959150658058">"您的运营商不支持在手机无人接听时停用来电转接功能。"</string>
     <string name="labelCFNRc" msgid="2614827454402079766">"无法接通时"</string>
+    <string name="labelCFNRc_cdma">"隐含呼叫转移"</string>
     <string name="messageCFNRc" msgid="6380695421020295119">"无法接通时的转接号码"</string>
     <string name="sum_cfnrc_enabled" msgid="7010898346095497421">"转接到 <xliff:g id="PHONENUMBER">{0}</xliff:g>"</string>
     <string name="sum_cfnrc_disabled" msgid="7222141261321276464">"未启用"</string>
@@ -575,4 +576,8 @@
     <string name="emergency_action_launch_hint" msgid="5841511849007540970">"再次触摸即可打开"</string>
     <string name="message_decode_error" msgid="3456481534066924855">"对邮件解码时出错。"</string>
     <string name="callFailed_cdma_activation" msgid="2307989779233262164">"SIM 卡已启用您的服务，并更新了您手机的漫游功能。"</string>
+    <string name="CFActivate">激活</string>
+    <string name="CFDeactivate">禁用</string>
+    <string name="null_phone_number">输入的电话号码不能为空!</string>
+    <string name="labelCFDeactAll">全部禁用</string>
 </resources>

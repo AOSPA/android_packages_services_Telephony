@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (C) 2006,2015 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,10 @@ import android.os.UpdateLock;
 import android.os.UserHandle;
 import android.preference.PreferenceManager;
 import android.provider.Settings.System;
+import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
 import android.telephony.CarrierConfigManager;
+import android.telephony.SubscriptionManager;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
@@ -73,6 +76,8 @@ import com.android.server.sip.SipService;
 import com.android.services.telephony.activation.SimActivationManager;
 
 import java.util.ArrayList;
+import java.util.List;
+
 import java.util.List;
 
 /**
@@ -256,8 +261,9 @@ public class PhoneGlobals extends ContextWrapper {
                         // Normal case: show the "SIM network unlock" PIN entry screen.
                         // The user won't be able to do anything else until
                         // they enter a valid SIM network PIN.
+                        int subtype = (Integer)((AsyncResult)msg.obj).result;
                         Log.i(LOG_TAG, "show sim depersonal panel");
-                        IccNetworkDepersonalizationPanel.showDialog();
+                        IccNetworkDepersonalizationPanel.showDialog(subtype);
                     }
                     break;
 
@@ -1014,4 +1020,19 @@ public class PhoneGlobals extends ContextWrapper {
      * Used to determine if the preserved call origin is fresh enough.
      */
     private static final long CALL_ORIGIN_EXPIRATION_MILLIS = 30 * 1000;
+
+    static PhoneAccountHandle getPhoneAccountHandle(Context context, int phoneId) {
+        if (!SubscriptionManager.isValidPhoneId(phoneId)) {
+            return null;
+        }
+        String subId = String.valueOf(PhoneFactory.getPhone(phoneId).getSubId());
+        TelecomManager telecomManager = TelecomManager.from(context);
+        List<PhoneAccountHandle> accounts = telecomManager.getCallCapablePhoneAccounts();
+        for (PhoneAccountHandle account : accounts) {
+            if (subId.equals(account.getId())) {
+                return account;
+            }
+        }
+        return null;
+    }
 }
