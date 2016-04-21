@@ -93,6 +93,7 @@ public class MobileNetworkSettings extends PreferenceActivity
     private static final String BUTTON_PREFERED_NETWORK_MODE = "preferred_network_mode_key";
     private static final String BUTTON_ROAMING_KEY = "button_roaming_key";
     private static final String BUTTON_CDMA_LTE_DATA_SERVICE_KEY = "cdma_lte_data_service_key";
+    private static final String BUTTON_UPLMN_KEY = "button_uplmn_key";
     private static final String BUTTON_ENABLED_NETWORKS_KEY = "enabled_networks_key";
     private static final String BUTTON_4G_LTE_KEY = "enhanced_4g_lte";
     private static final String BUTTON_CELL_BROADCAST_SETTINGS = "cell_broadcast_settings";
@@ -118,6 +119,7 @@ public class MobileNetworkSettings extends PreferenceActivity
     private SwitchPreference mButtonDataRoam;
     private SwitchPreference mButton4glte;
     private Preference mLteDataServicePref;
+    private Preference mButtonUplmnPref;
 
     private static final String iface = "rmnet0"; //TODO: this will go away
     private List<SubscriptionInfo> mActiveSubInfos;
@@ -161,16 +163,29 @@ public class MobileNetworkSettings extends PreferenceActivity
     private class PhoneChangeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            int phoneId = intent.getIntExtra(PhoneConstants.PHONE_KEY,
-                    SubscriptionManager.INVALID_PHONE_INDEX);
-            if (DBG) log("onReceive: phoneId: " + phoneId);
-            //Update UI if RAT change is on current slot/phone TAB.
-            if (mPhone.getPhoneId() == phoneId) {
-                // When the radio changes (ex: CDMA->GSM), refresh all options.
-                mGsmUmtsOptions = null;
-                mCdmaOptions = null;
-                updateBody();
+            String action = intent.getAction();
+            if (action.equals(TelephonyIntents.ACTION_RADIO_TECHNOLOGY_CHANGED)) {
+                int phoneId = intent.getIntExtra(PhoneConstants.PHONE_KEY,
+                        SubscriptionManager.INVALID_PHONE_INDEX);
+                if (DBG) log("onReceive: phoneId: " + phoneId);
+                //Update UI if RAT change is on current slot/phone TAB.
+                if (mPhone.getPhoneId() == phoneId) {
+                    // When the radio changes (ex: CDMA->GSM), refresh all options.
+                    mGsmUmtsOptions = null;
+                    mCdmaOptions = null;
+                    updateBody();
+                }
+            } else if (action.equals(Intent.ACTION_AIRPLANE_MODE_CHANGED) ||
+                    action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
+                setScreenState();
             }
+        }
+    }
+
+    private void setScreenState() {
+        if (mPhone != null) {
+            int simState = TelephonyManager.getDefault().getSimState(mPhone.getPhoneId());
+            getPreferenceScreen().setEnabled(simState != TelephonyManager.SIM_STATE_ABSENT);
         }
     }
 
@@ -502,6 +517,8 @@ public class MobileNetworkSettings extends PreferenceActivity
 
         mLteDataServicePref = prefSet.findPreference(BUTTON_CDMA_LTE_DATA_SERVICE_KEY);
 
+        mButtonUplmnPref = prefSet.findPreference(BUTTON_UPLMN_KEY);
+
         // Initialize mActiveSubInfo
         int max = mSubscriptionManager.getActiveSubscriptionInfoCountMax();
         mActiveSubInfos = new ArrayList<SubscriptionInfo>(max);
@@ -510,6 +527,8 @@ public class MobileNetworkSettings extends PreferenceActivity
 
         IntentFilter intentFilter = new IntentFilter(
                 TelephonyIntents.ACTION_RADIO_TECHNOLOGY_CHANGED);
+        intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
+        intentFilter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
         registerReceiver(mPhoneChangeReceiver, intentFilter);
         if (DBG) log("onCreate:-");
     }
@@ -532,7 +551,7 @@ public class MobileNetworkSettings extends PreferenceActivity
 
         // upon resumption from the sub-activity, make sure we re-enable the
         // preferences.
-        getPreferenceScreen().setEnabled(true);
+        setScreenState();
         preferredNetworkMode = getPreferredNetworkModeForPhoneId();
         // Set UI state in onResume because a user could go home, launch some
         // app to change this setting's backend, and re-launch this settings app
@@ -585,10 +604,17 @@ public class MobileNetworkSettings extends PreferenceActivity
         if (prefSet != null) {
             prefSet.removeAll();
             prefSet.addPreference(mButtonDataRoam);
+            if (getResources().getBoolean(R.bool.config_uplmn_for_usim)) {
+                mButtonUplmnPref.getIntent().putExtra(PhoneConstants.PHONE_KEY,
+                        mPhone.getPhoneId());
+                prefSet.addPreference(mButtonUplmnPref);
+            }
             prefSet.addPreference(mButtonPreferredNetworkMode);
             prefSet.addPreference(mButtonEnabledNetworks);
             prefSet.addPreference(mButton4glte);
         }
+
+        setScreenState();
 
         /** Some carriers required that network mode UI need to be hidden in below conditions:
           * 1. The absence of sim cards.

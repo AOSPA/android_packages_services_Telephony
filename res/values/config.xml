@@ -214,4 +214,7 @@
 
     <!-- To  show VMNotification always until user reads it-->
     <bool name="config_show_vm_notification_always" translatable="false">false</bool>
+
+    <!-- whether to show uplmn preference for usim -->
+    <bool name="config_uplmn_for_usim">false</bool>
 </resources>
