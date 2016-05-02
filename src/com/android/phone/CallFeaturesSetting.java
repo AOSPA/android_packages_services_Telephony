@@ -256,11 +256,39 @@ public class CallFeaturesSetting extends PreferenceActivity
             } else {
                 if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
                     prefSet.removePreference(fdnButton);
+                    addPreferencesFromResource(R.xml.cdma_call_privacy);
 
-                    if (!carrierConfig.getBoolean(
+                    if (carrierConfig.getBoolean(
                             CarrierConfigManager.KEY_VOICE_PRIVACY_DISABLE_UI_BOOL)) {
-                        addPreferencesFromResource(R.xml.cdma_call_privacy);
+                        CdmaVoicePrivacyCheckBoxPreference prefPri = (CdmaVoicePrivacyCheckBoxPreference)
+                                prefSet.findPreference("button_voice_privacy_key");
+                        if (prefPri != null) {
+                             prefSet.removePreference(prefPri);
+                        }
+                    }
+
+                    if (carrierConfig.getBoolean(
+                                CarrierConfigManager.KEY_CDMA_CW_CF_ENABLED_BOOL)) {
+                        Log.d(LOG_TAG, "Enabled CW CF");
+                        PreferenceScreen prefCF = (PreferenceScreen)
+                                prefSet.findPreference("button_cf_expand_key");
+                        if (prefCF != null) {
+                            prefCF.getIntent().putExtra(PhoneConstants.SUBSCRIPTION_KEY,
+                                    mPhone.getSubId());
+                        }
                         CdmaCallOptions.initCallWaitingPref(this, mPhone.getPhoneId());
+                    } else {
+                        Log.d(LOG_TAG, "Disabled CW CF");
+                        PreferenceScreen prefCW = (PreferenceScreen)
+                                prefSet.findPreference("button_cw_key");
+                        if (prefCW != null) {
+                            prefSet.removePreference(prefCW);
+                        }
+                        PreferenceScreen prefCF = (PreferenceScreen)
+                                prefSet.findPreference("button_cf_expand_key");
+                        if (prefCF != null) {
+                            prefSet.removePreference(prefCF);
+                        }
                     }
                 } else if (phoneType == PhoneConstants.PHONE_TYPE_GSM) {
 
