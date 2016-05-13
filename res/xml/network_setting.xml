@@ -28,6 +28,14 @@
         android:summaryOn="@string/roaming_enable"
         android:summaryOff="@string/roaming_disable"/>
 
+    <PreferenceScreen
+        android:key="button_uplmn_key"
+        android:title="@string/uplmn_list_setting_title"
+        android:persistent="false">
+        <intent android:targetPackage="com.qualcomm.qti.phonefeature"
+            android:targetClass="com.qualcomm.qti.phonefeature.uplmn.UserPLMNListPreference" />
+    </PreferenceScreen>
+
     <ListPreference
         android:key="preferred_network_mode_key"
         android:title="@string/preferred_network_mode_title"

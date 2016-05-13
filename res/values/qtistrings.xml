@@ -137,4 +137,6 @@
     <string name="preferred_networks"></string>
     <string name="summary_preferred_networks"></string>
     <string name="menu_dial_string">Call</string>
+    <!-- Preferred UPLMN -->
+    <string name="uplmn_list_setting_title">Preferred networks</string>
 </resources>
