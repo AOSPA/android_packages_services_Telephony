@@ -406,7 +406,7 @@ final class TelecomAccountRegistry {
      * @param handle The {@link PhoneAccountHandle}.
      * @return {@code True} if an entry exists.
      */
-    boolean hasAccountEntryForPhoneAccount(PhoneAccountHandle handle) {
+    private boolean hasAccountEntryForPhoneAccount(PhoneAccountHandle handle) {
         for (AccountEntry entry : mAccounts) {
             if (entry.getPhoneAccountHandle().equals(handle)) {
                 return true;
