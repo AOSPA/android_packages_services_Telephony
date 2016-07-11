@@ -2489,7 +2489,7 @@ public class PhoneUtils {
         // TODO: Should use some sort of special hidden flag to decorate this account as
         // an emergency-only account
         String id = isEmergency ? EMERGENCY_ACCOUNT_HANDLE_ID : prefix +
-            String.valueOf(phone.getIccSerialNumber());
+            String.valueOf(phone.getSubId());
         return makePstnPhoneAccountHandleWithPrefix(id, prefix, isEmergency);
     }
 
