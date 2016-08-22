@@ -28,6 +28,8 @@ import android.content.pm.UserInfo;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.PersistableBundle;
+import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -48,6 +50,7 @@ import android.util.ArrayMap;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.android.internal.telephony.IExtTelephony;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneBase;
 import com.android.internal.telephony.TelephonyCapabilities;
@@ -109,6 +112,9 @@ public class NotificationMgr {
 
     // used to track whether the message waiting indicator is visible, per subscription id.
     private ArrayMap<Integer, Boolean> mMwiVisible = new ArrayMap<Integer, Boolean>();
+
+    private IExtTelephony mExtTelephony = IExtTelephony.Stub.
+            asInterface(ServiceManager.getService("extphone"));
 
     /**
      * Private constructor (this is a singleton).
@@ -641,6 +647,10 @@ public class NotificationMgr {
     void updateNetworkSelection(int serviceState) {
         if (TelephonyCapabilities.supportsNetworkSelection(mPhone)) {
             int subId = mPhone.getSubId();
+            int slotId = mPhone.getPhoneId();
+            int provisionStatus;
+            final int PROVISIONED = 1;
+            final int INVALID_STATE = -1;
             if (SubscriptionManager.isValidSubscriptionId(subId)) {
                 // get the shared preference of network_selection.
                 // empty is auto mode, otherwise it is the operator alpha name
@@ -657,8 +667,20 @@ public class NotificationMgr {
                 if (DBG) log("updateNetworkSelection()..." + "state = " +
                         serviceState + " new network " + networkSelection);
 
+                try {
+                //get current provision state of the SIM.
+                    provisionStatus = mExtTelephony.getCurrentUiccCardProvisioningStatus(slotId);
+                } catch (RemoteException ex) {
+                    provisionStatus = INVALID_STATE;
+                    if (DBG) log("Failed to get status for slotId: "+ slotId +" Exception: " + ex);
+                } catch (NullPointerException ex) {
+                    provisionStatus = INVALID_STATE;
+                    if (DBG) log("Failed to get status for slotId: "+ slotId +" Exception: " + ex);
+                }
+
                 if (serviceState == ServiceState.STATE_OUT_OF_SERVICE
-                        && !TextUtils.isEmpty(networkSelection)) {
+                        && !TextUtils.isEmpty(networkSelection)
+                        && provisionStatus == PROVISIONED) {
                     if (!mSelectedUnavailableNotify) {
                         showNetworkSelection(networkSelection);
                         mSelectedUnavailableNotify = true;

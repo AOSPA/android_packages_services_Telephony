@@ -16,6 +16,8 @@
 
 package com.android.phone;
 
+import static android.Manifest.permission.READ_PHONE_STATE;
+
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.app.PendingIntent;
@@ -366,6 +368,8 @@ public class PhoneGlobals extends ContextWrapper {
             notificationMgr = NotificationMgr.init(this);
 
             mHandler.sendEmptyMessage(EVENT_START_SIP_SERVICE);
+
+            startImsService();
 
             // Create an instance of CdmaPhoneCallState and initialize it to IDLE
             cdmaPhoneCallState = new CdmaPhoneCallState();
@@ -994,6 +998,13 @@ public class PhoneGlobals extends ContextWrapper {
         notificationMgr.refreshMwi(subId);
     }
 
+    private void startImsService() {
+        Log.d(LOG_TAG, "startImsService");
+        Intent intent = new Intent(ACTION_START_IMS_SERVICE);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        sendBroadcast(intent, READ_PHONE_STATE);
+    }
+
     /**
      * Dismisses the message waiting (voicemail) indicator.
      *
@@ -1020,6 +1031,9 @@ public class PhoneGlobals extends ContextWrapper {
      * Used to determine if the preserved call origin is fresh enough.
      */
     private static final long CALL_ORIGIN_EXPIRATION_MILLIS = 30 * 1000;
+
+    private static final String ACTION_START_IMS_SERVICE =
+            "org.codeaurora.action.START_IMS_SERVICE";
 
     static PhoneAccountHandle getPhoneAccountHandle(Context context, int phoneId) {
         if (!SubscriptionManager.isValidPhoneId(phoneId)) {
