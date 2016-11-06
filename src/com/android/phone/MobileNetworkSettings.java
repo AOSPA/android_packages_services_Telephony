@@ -1311,7 +1311,7 @@ public class MobileNetworkSettings extends PreferenceActivity
 
         return worldModeOn;
     }
-
+    public static boolean isAPNSettingAdded = false;
     private void controlGsmOptions(boolean enable) {
         PreferenceScreen prefSet = getPreferenceScreen();
         if (prefSet == null) {
@@ -1329,6 +1329,9 @@ public class MobileNetworkSettings extends PreferenceActivity
                 (PreferenceScreen) prefSet.findPreference(BUTTON_CARRIER_SETTINGS_KEY);
         if (apnExpand != null) {
             apnExpand.setEnabled(isWorldMode() || enable);
+        }
+        if (isAPNSettingAdded) {
+            prefSet.removePreference(apnExpand);
         }
         if (operatorSelectionExpand != null) {
             if (enable) {
@@ -1350,6 +1353,13 @@ public class MobileNetworkSettings extends PreferenceActivity
         if (enable && mCdmaOptions == null) {
             mCdmaOptions = new CdmaOptions(this, prefSet, mPhone);
         }
+        PreferenceScreen apnExpand =
+                (PreferenceScreen) prefSet.findPreference(BUTTON_APN_EXPAND_KEY);
+        //Atleast this avoids duplicate APNSettings
+        if(apnExpand != null){
+            isAPNSettingAdded = true;
+        }
+
         CdmaSystemSelectListPreference systemSelect =
                 (CdmaSystemSelectListPreference)prefSet.findPreference
                         (BUTTON_CDMA_SYSTEM_SELECT_KEY);
