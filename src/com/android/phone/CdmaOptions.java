@@ -63,7 +63,6 @@ public class CdmaOptions {
 
     protected void create() {
         mPrefActivity.addPreferencesFromResource(R.xml.cdma_options);
-
         mButtonAPNExpand = (PreferenceScreen) mPrefScreen.findPreference(BUTTON_APN_EXPAND_KEY);
         boolean removedAPNExpand = false;
         PersistableBundle carrierConfig =
@@ -90,6 +89,7 @@ public class CdmaOptions {
                             return true;
                         }
             });
+            com.android.phone.MobileNetworkSettings.isAPNSettingAdded = true;
         }
 
         mButtonCdmaSystemSelect = (CdmaSystemSelectListPreference)mPrefScreen

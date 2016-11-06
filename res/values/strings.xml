@@ -132,7 +132,9 @@
          are applied to. [CHAR LIMIT=40] -->
     <string name="labelCdmaMore_with_label">CDMA call settings (<xliff:g id="subscriptionlabel" example="Verizon">%s</xliff:g>)</string>
     <!-- Mobile network settings screen, setting option name -->
-    <string name="apn_settings">Access Point Names</string>
+    <string name="apn_settings">Access point names</string>
+    <!-- Mobile network settings screen, setting option description -->
+    <string name="apn_settings_summary">Change network APN details</string>
     <!-- Label for the "Network settings" screen in the Settings UI -->
     <string name="settings_label">Network settings</string>
 

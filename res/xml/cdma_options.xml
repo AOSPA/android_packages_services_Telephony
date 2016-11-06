@@ -36,6 +36,7 @@
     <PreferenceScreen
         android:key="button_apn_key_cdma"
         android:title="@string/apn_settings"
+        android:summary="@string/apn_settings_summary"
         android:persistent="false">
 
         <!-- The launching Intent will be defined thru code as we need to pass some Extra -->
