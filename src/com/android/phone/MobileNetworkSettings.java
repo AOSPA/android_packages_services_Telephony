@@ -84,6 +84,8 @@ public class MobileNetworkSettings extends PreferenceActivity
     private static final boolean DBG = true;
     public static final int REQUEST_CODE_EXIT_ECM = 17;
 
+    protected static boolean isAPNSettingAdded = false;
+
     // Number of active Subscriptions to show tabs
     private static final int TAB_THRESHOLD = 2;
 
