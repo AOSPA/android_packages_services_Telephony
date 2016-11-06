@@ -138,6 +138,11 @@ public class GsmUmtsOptions {
                             return true;
                         }
             });
+            com.android.phone.MobileNetworkSettings.isAPNSettingAdded = true;
+        }
+
+        if (mButtonAPNExpand!=null && com.android.phone.MobileNetworkSettings.isAPNSettingAdded) {
+            mPrefScreen.removePreference(mButtonAPNExpand);
         }
     }
 
