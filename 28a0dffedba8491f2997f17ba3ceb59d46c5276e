@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba65a107_b83099e9",
+        "filename": "src/com/android/phone/MobileNetworkSettings.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 1314,
+      "author": {
+        "id": 1000007
+      },
+      "writtenOn": "2016-11-06T22:57:41Z",
+      "side": 1,
+      "message": "move this up with the other booleans, no need to make it static and it should be private",
+      "revId": "28a0dffedba8491f2997f17ba3ceb59d46c5276e",
+      "serverId": "3162e3d8-d894-470e-abd9-724f7b0effad",
+      "unresolved": false
+    }
+  ]
+}
