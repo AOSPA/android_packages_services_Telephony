@@ -192,21 +192,6 @@
     <string name="preferred_network_mode_lte_gsm_umts_summary" msgid="633315028976225026">"Voorkeurnetwerkmodus: LTE / GSM / UMTS"</string>
     <string name="preferred_network_mode_lte_cdma_summary" msgid="3722647806454528426">"Voorkeurnetwerk-modus: LTE / CDMA"</string>
     <string name="preferred_network_mode_tdscdma_summary" msgid="8021016193718678775">"Voorkeur-netwerkmodus: TDSCDMA"</string>
-  <string-array name="preferred_network_mode_choices">
-    <item msgid="7886739962255042385">"LTE / WCDMA"</item>
-    <item msgid="577652050447385699">"LTE"</item>
-    <item msgid="6813597571293773656">"Globaal"</item>
-    <item msgid="127064712132619032">"GSM/WCDMA/LTE"</item>
-    <item msgid="1126767511633425977">"CDMA + LTE/EvDo"</item>
-    <item msgid="6389676313771670660">"CDMA/EvDo/GSM/WCDMA"</item>
-    <item msgid="545430093607698090">"Net EvDo"</item>
-    <item msgid="1508557726283094448">"CDMA sonder EvDo"</item>
-    <item msgid="4341433122263841224">"CDMA/EvDo outomaties"</item>
-    <item msgid="5958053792390386668">"GSM/WCDMA outomaties"</item>
-    <item msgid="7913148405605373434">"Net WCDMA"</item>
-    <item msgid="1524224863879435516">"Net GSM"</item>
-    <item msgid="3817924849415716259">"GSM/WCDMA verkies"</item>
-  </string-array>
     <string name="enhanced_4g_lte_mode_title" msgid="522191650223239171">"Verbeterde 4G LTE-modus"</string>
     <string name="enhanced_4g_lte_mode_title_variant" msgid="4871126028907265406">"Gevorderde oproepe"</string>
     <string name="enhanced_4g_lte_mode_summary" msgid="2332175070522125850">"Gebruik LTE-dienste om stem- en ander kommunikasie te verbeter (aanbeveel)"</string>
