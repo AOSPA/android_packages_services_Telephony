@@ -1,0 +1,8 @@
+Code-Review+2: Alex Naidis <alex.naidis@linux.com>
+Verified+1: Alex Naidis <alex.naidis@linux.com>
+Code-Review+2: Evan Anderson <evananderson@aospa.co>
+Submitted-by: Evan Anderson <evananderson@aospa.co>
+Submitted-at: Wed, 19 Jul 2017 13:03:26 +0000
+Reviewed-on: https://gerrit.aospa.co/3423
+Project: AOSPA/android_packages_services_Telephony
+Branch: refs/heads/nougat-mr2
