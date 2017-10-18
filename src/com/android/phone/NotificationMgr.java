@@ -95,6 +95,8 @@ public class NotificationMgr {
      */
     private static final String EXTRA_IS_REFRESH = "is_refresh";
 
+    private static final String EXTRA_SUB_ID = "sub_id";
+
     // notification types
     static final int MMI_NOTIFICATION = 1;
     static final int NETWORK_SELECTION_NOTIFICATION = 2;
@@ -138,27 +140,6 @@ public class NotificationMgr {
         mSubscriptionManager = SubscriptionManager.from(mContext);
         mTelecomManager = TelecomManager.from(mContext);
         mTelephonyManager = (TelephonyManager) app.getSystemService(Context.TELEPHONY_SERVICE);
-
-        mSubscriptionManager.addOnSubscriptionsChangedListener(
-                new OnSubscriptionsChangedListener() {
-                    @Override
-                    public void onSubscriptionsChanged() {
-                        updateActivePhonesMwi();
-                    }
-                });
-    }
-
-    public void updateActivePhonesMwi() {
-        List<SubscriptionInfo> subInfos = mSubscriptionManager.getActiveSubscriptionInfoList();
-
-        if (subInfos == null) {
-            return;
-        }
-
-        for (int i = 0; i < subInfos.size(); i++) {
-            int subId = subInfos.get(i).getSubscriptionId();
-            refreshMwi(subId);
-        }
     }
 
     /**
@@ -210,7 +191,7 @@ public class NotificationMgr {
         if (mMwiVisible.containsKey(subId)) {
             boolean mwiVisible = mMwiVisible.get(subId);
             if (mwiVisible) {
-                updateMwi(subId, mwiVisible, true /* isRefresh */);
+                mApp.notifier.updatePhoneStateListeners(true);
             }
         }
     }
@@ -376,7 +357,7 @@ public class NotificationMgr {
                         UserManager.DISALLOW_OUTGOING_CALLS, userHandle)
                         && !user.isManagedProfile()) {
                     if (!maybeSendVoicemailNotificationUsingDefaultDialer(phone, vmCount, vmNumber,
-                            pendingIntent, isSettingsIntent, userHandle, isRefresh)) {
+                            pendingIntent, isSettingsIntent, userHandle, isRefresh, subId)) {
                         mNotificationManager.notifyAsUser(
                                 Integer.toString(subId) /* tag */,
                                 VOICEMAIL_NOTIFICATION,
@@ -394,7 +375,7 @@ public class NotificationMgr {
                         UserManager.DISALLOW_OUTGOING_CALLS, userHandle)
                         && !user.isManagedProfile()) {
                     if (!maybeSendVoicemailNotificationUsingDefaultDialer(phone, 0, null, null,
-                            false, userHandle, isRefresh)) {
+                            false, userHandle, isRefresh, subId)) {
                         mNotificationManager.cancelAsUser(
                                 Integer.toString(subId) /* tag */,
                                 VOICEMAIL_NOTIFICATION,
@@ -423,7 +404,7 @@ public class NotificationMgr {
      */
     private boolean maybeSendVoicemailNotificationUsingDefaultDialer(Phone phone, Integer count,
             String number, PendingIntent pendingIntent, boolean isSettingsIntent,
-            UserHandle userHandle, boolean isRefresh) {
+            UserHandle userHandle, boolean isRefresh, int subId) {
 
         if (shouldManageNotificationThroughDefaultDialer(userHandle)) {
             Intent intent = getShowVoicemailIntentForDefaultDialer(userHandle);
@@ -432,6 +413,7 @@ public class NotificationMgr {
             intent.putExtra(TelephonyManager.EXTRA_PHONE_ACCOUNT_HANDLE,
                     PhoneUtils.makePstnPhoneAccountHandle(phone));
             intent.putExtra(EXTRA_IS_REFRESH, isRefresh);
+            intent.putExtra(EXTRA_SUB_ID, subId);
             if (count != null) {
                 intent.putExtra(TelephonyManager.EXTRA_NOTIFICATION_COUNT, count);
             }
