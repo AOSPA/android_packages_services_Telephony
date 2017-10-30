@@ -576,12 +576,14 @@ public class TelephonyConnectionService extends ConnectionService {
         }
 
         if (!isEmergencyNumber) {
-            switch (state) {
+             boolean isDialingUt = (number.startsWith("*") || number.startsWith("#"))
+                              && number.endsWith("#") && phone.isUtEnabled();
+             switch (state) {
                 case ServiceState.STATE_IN_SERVICE:
                 case ServiceState.STATE_EMERGENCY_ONLY:
                     break;
                 case ServiceState.STATE_OUT_OF_SERVICE:
-                    if (phone.isUtEnabled() && number.endsWith("#")) {
+                    if (isDialingUt) {
                         Log.d(this, "onCreateOutgoingConnection dial for UT");
                         break;
                     } else {
@@ -592,11 +594,17 @@ public class TelephonyConnectionService extends ConnectionService {
                                         phone.getPhoneId()));
                     }
                 case ServiceState.STATE_POWER_OFF:
-                    return Connection.createFailedConnection(
+                    final int dataNetType = phone.getServiceState().getDataNetworkType();
+                    if (isDialingUt && dataNetType == TelephonyManager.NETWORK_TYPE_IWLAN) {
+                        Log.d(this, "onCreateOutgoingConnection dial for UT");
+                        break;
+                    } else {
+                        return Connection.createFailedConnection(
                             DisconnectCauseUtil.toTelecomDisconnectCause(
-                                    android.telephony.DisconnectCause.POWER_OFF,
-                                    "ServiceState.STATE_POWER_OFF",
-                                    phone.getPhoneId()));
+                                android.telephony.DisconnectCause.POWER_OFF,
+                                "ServiceState.STATE_POWER_OFF",
+                                phone.getPhoneId()));
+                    }
                 default:
                     Log.d(this, "onCreateOutgoingConnection, unknown service state: %d", state);
                     return Connection.createFailedConnection(
