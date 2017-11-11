@@ -183,6 +183,7 @@ abstract class TelephonyConnection extends Connection
                     // whether the call should have the HD audio property set.
                     refreshConferenceSupported();
                     refreshDisableAddCall();
+                    refreshHoldSupported();
                     updateConnectionProperties();
                     break;
 
@@ -1202,6 +1203,18 @@ abstract class TelephonyConnection extends Connection
         }
     }
 
+    private void refreshHoldSupported() {
+       if (mOriginalConnection == null) {
+           Log.w(this, "refreshHoldSupported org conn is null");
+           return;
+       }
+
+       if (!mOriginalConnection.shouldAllowHoldingVideoCall() && canHoldImsCalls() !=
+               can(getConnectionCapabilities(), CAPABILITY_HOLD | CAPABILITY_SUPPORT_HOLD)) {
+           updateConnectionCapabilities();
+       }
+    }
+
     private void refreshDisableAddCall() {
         if (shouldSetDisableAddCallExtra()) {
             putExtra(Connection.EXTRA_DISABLE_ADD_CALL, true);
@@ -1244,7 +1257,7 @@ abstract class TelephonyConnection extends Connection
                 wasVideoCall = call.wasVideoCall();
             }
 
-            isVowifiEnabled = ImsUtil.isWfcEnabled(phone.getContext());
+            isVowifiEnabled = ImsUtil.isWfcEnabled(phone.getContext(), phone.getPhoneId());
         }
 
         if (isCurrentVideoCall) {
@@ -1288,8 +1301,10 @@ abstract class TelephonyConnection extends Connection
     private boolean canHoldImsCalls() {
         PersistableBundle b = getCarrierConfig();
         // Return true if the CarrierConfig is unavailable
-        return !doesDeviceRespectHoldCarrierConfig() || b == null ||
-                b.getBoolean(CarrierConfigManager.KEY_ALLOW_HOLD_IN_IMS_CALL_BOOL);
+        return (!doesDeviceRespectHoldCarrierConfig() || b == null ||
+                b.getBoolean(CarrierConfigManager.KEY_ALLOW_HOLD_IN_IMS_CALL_BOOL)) &&
+                ((mOriginalConnection != null && mOriginalConnection.shouldAllowHoldingVideoCall())
+                || !VideoProfile.isVideo(getVideoState()));
     }
 
     private PersistableBundle getCarrierConfig() {
@@ -1381,7 +1396,8 @@ abstract class TelephonyConnection extends Connection
                     // mOriginalConnection could not be set for many seconds.
                     setDisconnected(DisconnectCauseUtil.toTelecomDisconnectCause(
                             android.telephony.DisconnectCause.LOCAL,
-                            "Local Disconnect before connection established."));
+                            "Local Disconnect before connection established.",
+                             getPhone().getPhoneId()));
                     close();
                 }
             }
@@ -1611,14 +1627,16 @@ abstract class TelephonyConnection extends Connection
                                         mOriginalConnection.getDisconnectCause(),
                                         mOriginalConnection.getVendorDisconnectCause(),
                                         mSsNotification.notificationType,
-                                        mSsNotification.code));
+                                        mSsNotification.code,
+                                        getPhone().getPhoneId()));
                                 mSsNotification = null;
                                 DisconnectCauseUtil.mNotificationCode = 0xFF;
                                 DisconnectCauseUtil.mNotificationType = 0xFF;
                             } else {
                                 setDisconnected(DisconnectCauseUtil.toTelecomDisconnectCause(
                                         mOriginalConnection.getDisconnectCause(),
-                                        mOriginalConnection.getVendorDisconnectCause()));
+                                        mOriginalConnection.getVendorDisconnectCause(),
+                                        getPhone().getPhoneId()));
                             }
                             fireResetDisconnectCause();
                             close();
@@ -2092,7 +2110,7 @@ abstract class TelephonyConnection extends Connection
         boolean isVoWifiEnabled = false;
         if (isIms) {
             ImsPhone imsPhone = (ImsPhone) phone;
-            isVoWifiEnabled = ImsUtil.isWfcEnabled(phone.getContext());
+            isVoWifiEnabled = ImsUtil.isWfcEnabled(phone.getContext(), phone.getPhoneId());
         }
         PhoneAccountHandle phoneAccountHandle = isIms ? PhoneUtils
                 .makePstnPhoneAccountHandle(phone.getDefaultPhone())
