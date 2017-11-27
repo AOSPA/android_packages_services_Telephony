@@ -146,7 +146,7 @@ public class CallNotifier extends Handler {
                 new OnSubscriptionsChangedListener() {
                     @Override
                     public void onSubscriptionsChanged() {
-                        updatePhoneStateListeners();
+                        updatePhoneStateListeners(true);
                     }
                 });
     }
@@ -603,7 +603,11 @@ public class CallNotifier extends Handler {
                 SHOW_MESSAGE_NOTIFICATION_TIME);
     }
 
-    public void updatePhoneStateListeners() {
+    public void updatePhoneStateListeners(boolean isRefresh) {
+        updatePhoneStateListeners(isRefresh, SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+    }
+
+    public void updatePhoneStateListeners(boolean isRefresh, int subIdToUpdate) {
         List<SubscriptionInfo> subInfos = mSubscriptionManager.getActiveSubscriptionInfoList();
 
         // Sort sub id list based on slot id, so that CFI/MWI notifications will be updated for
@@ -636,7 +640,12 @@ public class CallNotifier extends Handler {
                     mApplication.notificationMgr.updateCfi(subId, mCFIStatus.get(subId));
                 }
                 if (mMWIStatus.containsKey(subId)) {
-                    mApplication.notificationMgr.updateMwi(subId, mMWIStatus.get(subId));
+                    if (subId == subIdToUpdate) {
+                        mApplication.notificationMgr.updateMwi(subId, mMWIStatus.get(subId),
+                                isRefresh);
+                    } else {
+                        mApplication.notificationMgr.updateMwi(subId, mMWIStatus.get(subId), true);
+                    }
                 }
             }
         }
@@ -809,14 +818,14 @@ public class CallNotifier extends Handler {
         public void onMessageWaitingIndicatorChanged(boolean visible) {
             if (VDBG) log("onMessageWaitingIndicatorChanged(): " + this.mSubId + " " + visible);
             mMWIStatus.put(this.mSubId, visible);
-            updatePhoneStateListeners();
+            updatePhoneStateListeners(false, this.mSubId);
         }
 
         @Override
         public void onCallForwardingIndicatorChanged(boolean visible) {
             if (VDBG) log("onCallForwardingIndicatorChanged(): " + this.mSubId + " " + visible);
             mCFIStatus.put(this.mSubId, visible);
-            updatePhoneStateListeners();
+            updatePhoneStateListeners(false);
         }
     };
 
