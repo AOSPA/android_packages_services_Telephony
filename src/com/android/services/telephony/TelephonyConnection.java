@@ -24,6 +24,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PersistableBundle;
+import android.view.WindowManager;
 import android.widget.Toast;
 import android.telecom.CallAudioState;
 import android.telecom.ConferenceParticipant;
@@ -263,8 +264,15 @@ abstract class TelephonyConnection extends Connection
                         } else {
                             mDisplayName = notificationText;
                         }
-                        Toast.makeText(getPhone().getContext(),
-                                mDisplayName, Toast.LENGTH_LONG).show();
+                        boolean showWhenLocked = QtiImsExtUtils.isCarrierConfigEnabled(getPhone()
+                                .getPhoneId(), getPhone().getContext(), "config_show_when_locked");
+                        Toast toast = Toast.makeText(getPhone().getContext(),
+                                mDisplayName, Toast.LENGTH_LONG);
+                        if (showWhenLocked) {
+                            toast.getWindowParams().flags |= WindowManager.LayoutParams
+                                    .FLAG_SHOW_WHEN_LOCKED;
+                        }
+                        toast.show();
                         if (mOriginalConnection != null && mSsNotification.history != null) {
 
                             Bundle lastForwardedNumber = new Bundle();
