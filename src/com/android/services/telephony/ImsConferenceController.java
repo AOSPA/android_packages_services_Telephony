@@ -381,6 +381,7 @@ public class ImsConferenceController {
         conference.setState(conferenceHostConnection.getState());
         conference.addListener(mConferenceListener);
         conference.updateConferenceParticipantsAfterCreation();
+        conference.setExtras(conferenceHostConnection.getExtras());
         mConnectionService.addConference(conference);
         conferenceHostConnection.setTelecomCallId(conference.getTelecomCallId());
 
