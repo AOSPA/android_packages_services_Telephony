@@ -2788,9 +2788,16 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         enforceModifyPermission();
         int dunRequired = Settings.Global.getInt(mPhone.getContext().getContentResolver(),
                 Settings.Global.TETHER_DUN_REQUIRED, 2);
+        boolean hasTetherApn = false;
+        Phone phone = getPhone(mSubscriptionController.getDefaultDataSubId());
+        if (phone != null) {
+            hasTetherApn = phone.hasMatchedTetherApnSetting();
+        } else {
+            loge("getTetherApnRequired: no phone for DDS sub");
+        }
         // If not set, check net.tethering.noprovisioning, TETHER_DUN_APN setting and
         // config_tether_apndata.
-        if (dunRequired == 2 && mPhone.hasMatchedTetherApnSetting()) {
+        if (dunRequired == 2 && hasTetherApn) {
             dunRequired = 1;
         }
         return dunRequired;

@@ -776,6 +776,7 @@ final class TelecomAccountRegistry {
                 R.bool.config_pstn_phone_accounts_enabled);
         int activeCount = 0;
         int activeSubscriptionId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+        boolean isAnyProvisionInfoPending = false;
 
         synchronized (mAccountsLock) {
             if (phoneAccountsEnabled) {
@@ -783,6 +784,7 @@ final class TelecomAccountRegistry {
                 // IExtTelephony.getCurrentUiccCardProvisioningStatus()can return
                 final int PROVISIONED = 1;
                 final int INVALID_STATE = -1;
+                final int CARD_NOT_PRESENT = -2;
                 boolean isInEcm = false;
 
                 for (Phone phone : phones) {
@@ -810,6 +812,12 @@ final class TelecomAccountRegistry {
                         }
                     }
 
+                    // In SSR case, UiccCard's would be disposed hence the provision state received as
+                    // CARD_NOT_PRESENT but valid subId present in SubscriptionInfo record.
+                    if (provisionStatus == INVALID_STATE || ((provisionStatus == CARD_NOT_PRESENT)
+                            && mSubscriptionManager.isActiveSubId(subscriptionId))) {
+                        isAnyProvisionInfoPending = true;
+                    }
                     Log.d(this, "Phone with subscription id: " + subscriptionId +
                             " slotId: " + slotId + " provisionStatus: " + provisionStatus);
                     // setupAccounts can be called multiple times during service changes. Don't add an
@@ -878,8 +886,8 @@ final class TelecomAccountRegistry {
             }
         } else if ((defaultPhoneAccount == null)
                     && (mTelephonyManager.getPhoneCount() > Count.ONE.ordinal())
-                    && (activeCount == Count.ONE.ordinal()) && (!isNonSimAccountFound())
-                    && (isRadioInValidState(phones))) {
+                    && (activeCount == Count.ONE.ordinal()) && !isAnyProvisionInfoPending
+                    && (!isNonSimAccountFound()) && (isRadioInValidState(phones))) {
             PhoneAccountHandle phoneAccountHandle =
                     subscriptionIdToPhoneAccountHandle(activeSubscriptionId);
             if (phoneAccountHandle != null) {
