@@ -77,6 +77,12 @@
     <string name="voicemail" msgid="8693759337917898954">"Segreteria"</string>
     <string name="voicemail_settings_with_label" msgid="152724978380748296">"Segreteria (<xliff:g id="SUBSCRIPTIONLABEL">%s</xliff:g>)"</string>
     <string name="voicemail_abbreviated" msgid="2215592488517217448">"ST:"</string>
+    <!-- no translation found for make_and_receive_calls (1258596928285972166) -->
+    <skip />
+    <!-- no translation found for smart_forwarding_settings_menu (3874243342391798449) -->
+    <skip />
+    <!-- no translation found for smart_forwarding_settings_menu_summary (8962247659470565059) -->
+    <skip />
     <string name="voicemail_notifications_preference_title" msgid="4019728578955102213">"Notifiche"</string>
     <string name="cell_broadcast_settings" msgid="8740238216690502563">"Trasmissioni di emergenza"</string>
     <string name="call_settings" msgid="6112441768261754562">"Impostazioni chiamate"</string>
@@ -751,6 +757,7 @@
     <string name="messageCallBarring" msgid="2412123220272136055">"Inserisci password"</string>
     <string name="call_barring_settings" msgid="80766145008623645">"Impostazioni di blocco chiamate"</string>
     <string name="call_barring_deactivate_all_no_password" msgid="920902774366557311">"Disattivare tutte le impostazioni di blocco chiamate?"</string>
+    <string name="callFailed_NetworkBusy" msgid="1068322087736565421">"La rete è occupata. Riprova a chiamare di nuovo più tardi."</string>
     <string name="supp_service_notification_call_deflected" msgid="9195460512875330926">"Chiamata deviata."</string>
     <string name="supp_service_notification_call_forwarded" msgid="7818548630812124053">"Trasferimento di chiamata."</string>
     <string name="supp_service_notification_call_waiting" msgid="789154111899572489">"Chiamata in attesa."</string>

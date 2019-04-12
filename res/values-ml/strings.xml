@@ -77,6 +77,12 @@
     <string name="voicemail" msgid="8693759337917898954">"വോയ്സ് മെയില്‍"</string>
     <string name="voicemail_settings_with_label" msgid="152724978380748296">"ശബ്ദമെയിൽ(<xliff:g id="SUBSCRIPTIONLABEL">%s</xliff:g>)"</string>
     <string name="voicemail_abbreviated" msgid="2215592488517217448">"VM:"</string>
+    <!-- no translation found for make_and_receive_calls (1258596928285972166) -->
+    <skip />
+    <!-- no translation found for smart_forwarding_settings_menu (3874243342391798449) -->
+    <skip />
+    <!-- no translation found for smart_forwarding_settings_menu_summary (8962247659470565059) -->
+    <skip />
     <string name="voicemail_notifications_preference_title" msgid="4019728578955102213">"അറിയിപ്പുകൾ"</string>
     <string name="cell_broadcast_settings" msgid="8740238216690502563">"അടിയന്തര പ്രക്ഷേപണങ്ങൾ"</string>
     <string name="call_settings" msgid="6112441768261754562">"കോൾ ക്രമീകരണങ്ങൾ"</string>
@@ -749,6 +755,7 @@
     <string name="messageCallBarring" msgid="2412123220272136055">"പാസ്‌വേഡ് നൽകുക"</string>
     <string name="call_barring_settings" msgid="80766145008623645">"കോൾ തടയൽ ക്രമീകരണം"</string>
     <string name="call_barring_deactivate_all_no_password" msgid="920902774366557311">"എല്ലാ കോൾ തടയൽ ക്രമീകരണവും നിർജ്ജീവമാക്കണോ?"</string>
+    <string name="callFailed_NetworkBusy" msgid="1068322087736565421">"നെറ്റ്‌വർക്ക് തിരക്കിലാണ്. കോൾ ചെയ്യാൻ പിന്നീട് വീണ്ടും ശ്രമിക്കുക."</string>
     <string name="supp_service_notification_call_deflected" msgid="9195460512875330926">"കോൾ വഴി തിരിച്ചുവിട്ടു."</string>
     <string name="supp_service_notification_call_forwarded" msgid="7818548630812124053">"കോൾ കൈമാറി."</string>
     <string name="supp_service_notification_call_waiting" msgid="789154111899572489">"കോൾ വെയ്‌റ്റിംഗിലാണ്."</string>
