@@ -1492,7 +1492,6 @@ public class TelecomAccountRegistry {
                     // states we are interested in from what
                     // IExtTelephony.getCurrentUiccCardProvisioningStatus()can return
                     final int PROVISIONED = 1;
-                    final int INVALID_STATE = -1;
                     final int CARD_NOT_PRESENT = -2;
 
                     for (Phone phone : phones) {
@@ -1509,11 +1508,9 @@ public class TelecomAccountRegistry {
                                 provisionStatus =
                                         mExtTelephony.getCurrentUiccCardProvisioningStatus(slotId);
                             } catch (RemoteException ex) {
-                                provisionStatus = INVALID_STATE;
                                 Log.w(this, "Failed to get status , slotId: "+ slotId +" Exception: "
                                         + ex);
                             } catch (NullPointerException ex) {
-                                provisionStatus = INVALID_STATE;
                                 Log.w(this, "Failed to get status , slotId: "+ slotId +" Exception: "
                                         + ex);
                             }
@@ -1521,7 +1518,7 @@ public class TelecomAccountRegistry {
 
                         // In SSR case, UiccCard's would be disposed hence the provision state received as
                         // CARD_NOT_PRESENT but valid subId present in SubscriptionInfo record.
-                        if (provisionStatus == INVALID_STATE || ((provisionStatus == CARD_NOT_PRESENT)
+                        if (((provisionStatus == CARD_NOT_PRESENT)
                                 && mSubscriptionManager.isActiveSubId(subscriptionId))) {
                             isAnyProvisionInfoPending = true;
                         }
