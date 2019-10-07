@@ -1171,6 +1171,7 @@ public class TelecomAccountRegistry {
         int activeCount = 0;
         int activeSubscriptionId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
         boolean isAnyProvisionInfoPending = false;
+        int extAttempts = 0;
 
         synchronized (mAccountsLock) {
             try {
@@ -1189,7 +1190,7 @@ public class TelecomAccountRegistry {
                                 TelephonyProperties.PROPERTY_INECM_MODE, "false"));
                         boolean isAccountAdded = false;
 
-                        if (mTelephonyManager.getPhoneCount() > 1) {
+                        if (mTelephonyManager.getPhoneCount() > 1 && extAttempts <= 3) {
                             IExtTelephony mExtTelephony = IExtTelephony.Stub
                                     .asInterface(ServiceManager.getService("extphone"));
                             try {
@@ -1202,6 +1203,8 @@ public class TelecomAccountRegistry {
                             } catch (NullPointerException ex) {
                                 Log.w(this, "Failed to get status , slotId: "+ slotId +" Exception: "
                                         + ex);
+                                extAttempts++;
+                                Log.w(this, "Attempted qti provision status:" + extAttempts + "times");
                             }
                         }
 
