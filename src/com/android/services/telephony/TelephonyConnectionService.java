@@ -2354,6 +2354,9 @@ public class TelephonyConnectionService extends ConnectionService {
             case CallStateException.ERROR_DEVICE_IN_SECURE_MODE:
                  cause = android.telephony.DisconnectCause.SECURE_MODE;
                  break;
+            case CallStateException.ERROR_FDN_BLOCKED:
+                 cause = android.telephony.DisconnectCause.FDN_BLOCKED;
+                 break;
         }
         connection.setTelephonyConnectionDisconnected(
                 DisconnectCauseUtil.toTelecomDisconnectCause(cause, e.getMessage(),
