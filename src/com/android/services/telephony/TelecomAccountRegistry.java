@@ -1196,7 +1196,8 @@ public class TelecomAccountRegistry {
                 tearDownAccounts();
                 setupAccounts();
             } else if (CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED.equals(
-                    intent.getAction())) {
+                    intent.getAction()) || CarrierConfigManager.ACTION_ESSENTIAL_RECORDS_LOADED.
+                    equals(intent.getAction())) {
                 Log.i(this, "Carrier-config changed, checking for phone account updates.");
                 int subId = intent.getIntExtra(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX,
                         SubscriptionManager.INVALID_SUBSCRIPTION_ID);
@@ -1570,6 +1571,7 @@ public class TelecomAccountRegistry {
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_USER_SWITCHED);
         filter.addAction(CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED);
+        filter.addAction(CarrierConfigManager.ACTION_ESSENTIAL_RECORDS_LOADED);
         mContext.registerReceiver(mReceiver, filter);
 
         //We also need to listen for locale changes

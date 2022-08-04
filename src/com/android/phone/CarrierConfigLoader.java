@@ -806,8 +806,33 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
             // We are in a state where only the essential records have loaded.
             // Let the Phone know about this.
             notifyConfigChangedToPhone(phoneId);
+            broadcastEssentialRecordsLoadedIntent(phoneId);
         } else {
             broadcastConfigChangedIntent(phoneId, true);
+        }
+    }
+
+    private void broadcastEssentialRecordsLoadedIntent(int phoneId) {
+        Intent intent = new Intent(CarrierConfigManager.ACTION_ESSENTIAL_RECORDS_LOADED);
+        intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY_BEFORE_BOOT |
+                Intent.FLAG_RECEIVER_FOREGROUND);
+
+        SubscriptionManager.putPhoneIdAndSubIdExtra(intent, phoneId);
+        intent.putExtra(TelephonyManager.EXTRA_SPECIFIC_CARRIER_ID,
+                getSpecificCarrierIdForPhoneId(phoneId));
+        intent.putExtra(TelephonyManager.EXTRA_CARRIER_ID, getCarrierIdForPhoneId(phoneId));
+
+        intent.putExtra(CarrierConfigManager.EXTRA_SLOT_INDEX, phoneId);
+        intent.putExtra(CarrierConfigManager.EXTRA_REBROADCAST_ON_UNLOCK,
+                mFromSystemUnlocked[phoneId]);
+        mContext.sendBroadcastAsUser(intent, UserHandle.ALL,
+                "com.qti.permission.RECEIVE_ESSENTIAL_RECORDS_LOADED");
+        int[] subIds = SubscriptionManager.getSubId(phoneId);
+        if (subIds != null && subIds.length > 0) {
+            logd("Broadcast ESSENTIAL_RECORDS_LOADED for phone " + phoneId +
+                    ", subId = " + subIds[0]);
+        } else {
+            logd("Broadcast ESSENTIAL_RECORDS_LOADED for phone " + phoneId);
         }
     }
 
