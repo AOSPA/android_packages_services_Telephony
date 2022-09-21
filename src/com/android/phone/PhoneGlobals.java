@@ -414,21 +414,6 @@ public class PhoneGlobals extends ContextWrapper {
                         mTelephonyCallbacks[phoneId] = callback;
                     }
                     break;
-                case EVENT_DATA_CONNECTION_ATTACHED:
-                    subId = (Integer)((AsyncResult)msg.obj).userObj;
-                    phone = getPhone(subId);
-                    if (phone != null) {
-                        DataConnectionReasons reasons = new DataConnectionReasons();
-                        boolean dataAllowed = phone.isDataAllowed(ApnSetting.TYPE_DEFAULT, reasons);
-                        if (!dataAllowed && dataIsNowRoaming(subId)
-                                && subId == mDefaultDataSubId) {
-                            if (VDBG) Log.v(LOG_TAG, "EVENT_DATA_CONNECTION_ATTACHED");
-                                updateDataRoamingStatus();
-                        }
-                    } else {
-                        Log.w(LOG_TAG, "phone object is null subId: " + subId);
-                    }
-                    break;
                 case EVENT_BACKUP_CALLING_SETTING_CHANGED:
                     Log.d(LOG_TAG, "EVENT_BACKUP_CALLING_SETTING_CHANGED");
                     notificationMgr.dismissBackupCallingNotification(msg.arg1);
@@ -579,15 +564,15 @@ public class PhoneGlobals extends ContextWrapper {
                     mHandler, EVENT_MULTI_SIM_CONFIG_CHANGED, null);
 
             mTelephonyCallbacks = new PhoneAppCallback[tm.getSupportedModemCount()];
-
-            for (Phone phone : PhoneFactory.getPhones()) {
-                int subId = phone.getSubId();
-                PhoneAppCallback callback = new PhoneAppCallback(subId);
-                tm.createForSubscriptionId(subId).registerTelephonyCallback(
-                        TelephonyManager.INCLUDE_LOCATION_DATA_NONE, mHandler::post, callback);
-                mTelephonyCallbacks[phone.getPhoneId()] = callback;
+            if (tm.getSupportedModemCount() > 0) {
+                for (Phone phone : PhoneFactory.getPhones()) {
+                    int subId = phone.getSubId();
+                    PhoneAppCallback callback = new PhoneAppCallback(subId);
+                    tm.createForSubscriptionId(subId).registerTelephonyCallback(
+                            TelephonyManager.INCLUDE_LOCATION_DATA_NONE, mHandler::post, callback);
+                    mTelephonyCallbacks[phone.getPhoneId()] = callback;
+                }
             }
-
             mCarrierVvmPackageInstalledReceiver.register(this);
 
             //set the default values for the preferences in the phone.
