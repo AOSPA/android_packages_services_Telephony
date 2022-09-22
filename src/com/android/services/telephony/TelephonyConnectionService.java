@@ -196,18 +196,27 @@ public class TelephonyConnectionService extends ConnectionService {
      */
     private static class SlotStatus {
         public int slotId;
+        public int activeSubId;
         // RAT capabilities
         public int capabilities;
         // By default, we will assume that the slots are not locked.
         public boolean isLocked = false;
         // Is the emergency number associated with the slot
         public boolean hasDialedEmergencyNumber = false;
-        //SimState
+        //SimState.
         public int simState;
 
-        public SlotStatus(int slotId, int capabilities) {
+        //helper to check if sim is really 'present' in the traditional sense.
+        // since eSIM always reports SIM_STATE_READY
+        public boolean isSubActiveAndSimPresent() {
+            return (simState != TelephonyManager.SIM_STATE_ABSENT
+                && activeSubId != SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+        }
+
+        public SlotStatus(int slotId, int capabilities, int activeSubId) {
             this.slotId = slotId;
             this.capabilities = capabilities;
+            this.activeSubId = activeSubId;
         }
     }
 
@@ -255,6 +264,7 @@ public class TelephonyConnectionService extends ConnectionService {
         public int getPhoneId(int subId) {
             return SubscriptionManager.getPhoneId(subId);
         }
+
     };
 
     /**
@@ -263,7 +273,6 @@ public class TelephonyConnectionService extends ConnectionService {
     @VisibleForTesting
     public interface TelephonyManagerProxy {
         int getPhoneCount();
-        boolean hasIccCard(int slotId);
         boolean isCurrentEmergencyNumber(String number);
         Map<Integer, List<EmergencyNumber>> getCurrentEmergencyNumberList();
         boolean isConcurrentCallsPossible();
@@ -282,11 +291,6 @@ public class TelephonyConnectionService extends ConnectionService {
         @Override
         public int getPhoneCount() {
             return mTelephonyManager.getPhoneCount();
-        }
-
-        @Override
-        public boolean hasIccCard(int slotId) {
-            return mTelephonyManager.hasIccCard(slotId);
         }
 
         @Override
@@ -2616,7 +2620,7 @@ public class TelephonyConnectionService extends ConnectionService {
         for (Phone phone : mPhoneFactoryProxy.getPhones()) {
             if (phone.getEmergencyNumberTracker() != null) {
                 if (phone.getEmergencyNumberTracker().isEmergencyNumber(
-                        emergencyNumberAddress, true)) {
+                        emergencyNumberAddress)) {
                     if (isAvailableForEmergencyCalls(phone)) {
                         // a)
                         if (phone.getPhoneId() == defaultVoicePhoneId) {
@@ -2692,10 +2696,11 @@ public class TelephonyConnectionService extends ConnectionService {
             // 5)
             // Store the RAF Capabilities for sorting later.
             int radioAccessFamily = phone.getRadioAccessFamily();
-            SlotStatus status = new SlotStatus(i, radioAccessFamily);
+            SlotStatus status = new SlotStatus(i, radioAccessFamily, phone.getSubId());
             phoneSlotStatus.add(status);
             Log.i(this, "getFirstPhoneForEmergencyCall, RAF:" +
-                    Integer.toHexString(radioAccessFamily) + " saved for Phone Id:" + i);
+                Integer.toHexString(radioAccessFamily) + " saved for Phone Id:" + i + " subId:"
+                + phone.getSubId());
             // 4)
             // Report Slot's PIN/PUK lock status for sorting later.
             int simState = mSubscriptionManagerProxy.getSimStateForSlotIdx(i);
@@ -2705,6 +2710,7 @@ public class TelephonyConnectionService extends ConnectionService {
                     simState == TelephonyManager.SIM_STATE_PUK_REQUIRED) {
                 status.isLocked = true;
             }
+
             // 3) Store if the Phone has the corresponding emergency number
             if (phonesWithEmergencyNumber != null) {
                 for (Phone phoneWithEmergencyNumber : phonesWithEmergencyNumber) {
@@ -2715,13 +2721,15 @@ public class TelephonyConnectionService extends ConnectionService {
                 }
             }
             // 6)
-            if (firstPhoneWithSim == null && mTelephonyManagerProxy.hasIccCard(i)) {
-                // The slot has a SIM card inserted, but is not in service, so keep track of this
-                // Phone. Do not return because we want to make sure that none of the other Phones
+            if (firstPhoneWithSim == null &&
+                (phone.getSubId() != SubscriptionManager.INVALID_SIM_SLOT_INDEX)) {
+                // The slot has a SIM card inserted (and an active subscription), but is not in
+                // service, so keep track of this Phone.
+                // Do not return because we want to make sure that none of the other Phones
                 // are in service (because that is always faster).
                 firstPhoneWithSim = phone;
-                Log.i(this, "getFirstPhoneForEmergencyCall, SIM card inserted, Phone Id:" +
-                        firstPhoneWithSim.getPhoneId());
+                Log.i(this, "getFirstPhoneForEmergencyCall, SIM with active sub, Phone Id:" +
+                    firstPhoneWithSim.getPhoneId());
             }
         }
         // 7)
@@ -2737,17 +2745,18 @@ public class TelephonyConnectionService extends ConnectionService {
             final int defaultPhoneId = mPhoneFactoryProxy.getDefaultPhone().getPhoneId();
             final Phone firstOccupiedSlot = firstPhoneWithSim;
             if (!phoneSlotStatus.isEmpty()) {
+                Log.i(this, "getFirstPhoneForEmergencyCall, list size: " + phoneSlotStatus.size()
+                    + " defaultPhoneId: " + defaultPhoneId + " firstOccupiedSlot: "
+                    + firstOccupiedSlot);
                 // Only sort if there are enough elements to do so.
                 if (phoneSlotStatus.size() > 1) {
                     Collections.sort(phoneSlotStatus, (o1, o2) -> {
-                        // Sort by non-absent SIM.
-                        if (o1.simState == TelephonyManager.SIM_STATE_ABSENT
-                                && o2.simState != TelephonyManager.SIM_STATE_ABSENT) {
-                            return -1;
-                        }
-                        if (o2.simState == TelephonyManager.SIM_STATE_ABSENT
-                                && o1.simState != TelephonyManager.SIM_STATE_ABSENT) {
+                        // Sort by non-absent SIM (SIM without active sub is considered absent).
+                        if (o1.isSubActiveAndSimPresent() && !o2.isSubActiveAndSimPresent()) {
                             return 1;
+                        }
+                        if (o2.isSubActiveAndSimPresent() && !o1.isSubActiveAndSimPresent()) {
+                            return -1;
                         }
                         // First start by seeing if either of the phone slots are locked. If they
                         // are, then sort by non-locked SIM first. If they are both locked, sort
