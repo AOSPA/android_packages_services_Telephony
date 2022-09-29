@@ -86,6 +86,8 @@ import com.android.phone.vvm.CarrierVvmPackageInstalledReceiver;
 import com.android.services.telephony.domainselection.TelephonyDomainSelectionService;
 import com.android.services.telephony.rcs.TelephonyRcsService;
 
+import com.qti.extphone.ExtTelephonyManager;
+
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
@@ -158,6 +160,7 @@ public class PhoneGlobals extends ContextWrapper {
         FULL
     }
 
+    private static final String NETWORK_ACCESS_MODE = "access_mode";
     private static PhoneGlobals sMe;
 
     CallManager mCM;
@@ -988,7 +991,7 @@ public class PhoneGlobals extends ContextWrapper {
 
     private void handleServiceStateChanged(ServiceState serviceState, int subId) {
         if (VDBG) Log.v(LOG_TAG, "handleServiceStateChanged");
-        int state = serviceState.getState();
+        int state = getRegistrationState(serviceState, subId);
         notificationMgr.updateNetworkSelection(state, subId);
 
         if (VDBG) {
@@ -998,6 +1001,17 @@ public class PhoneGlobals extends ContextWrapper {
         if (subId == mDefaultDataSubId) {
             updateDataRoamingStatus(serviceState.getOperatorNumeric());
         }
+    }
+
+    private int getRegistrationState(ServiceState serviceState, int subId) {
+        int state = serviceState.getState();
+        int accessMode = Settings.Global.getInt(getContentResolver(),
+                NETWORK_ACCESS_MODE + SubscriptionManager.getSlotIndex(subId),
+                ExtTelephonyManager.ACCESS_MODE_PLMN);
+        if (accessMode == ExtTelephonyManager.ACCESS_MODE_SNPN) {
+            state = serviceState.getDataRegState();
+        }
+        return state;
     }
 
     /**
@@ -1154,7 +1168,8 @@ public class PhoneGlobals extends ContextWrapper {
     public void onNetworkSelectionChanged(int subId) {
         Phone phone = getPhone(subId);
         if (phone != null) {
-            notificationMgr.updateNetworkSelection(phone.getServiceState().getState(), subId);
+            int state = getRegistrationState(phone.getServiceState(), subId);
+            notificationMgr.updateNetworkSelection(state, subId);
         } else {
             Log.w(LOG_TAG, "onNetworkSelectionChanged on null phone, subId: " + subId);
         }
