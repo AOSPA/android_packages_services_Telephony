@@ -1153,7 +1153,11 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
     @Nullable
     private PersistableBundle restoreConfigFromXml(@Nullable String packageName,
             @NonNull String extraString, int phoneId) {
-        return restoreConfigFromXml(packageName, extraString, phoneId, false);
+        if (SubscriptionManager.isValidPhoneId(phoneId)) {
+            return restoreConfigFromXml(packageName, extraString, phoneId, false);
+        } else {
+            return null;
+        }
     }
 
     @Nullable
@@ -1281,6 +1285,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
         mHasSentConfigChange = Arrays.copyOf(mHasSentConfigChange, mNumPhones);
         mFromSystemUnlocked = Arrays.copyOf(mFromSystemUnlocked, mNumPhones);
         mCarrierServiceChangeCallbacks = Arrays.copyOf(mCarrierServiceChangeCallbacks, mNumPhones);
+        mIsEssentialSimRecordsLoaded = Arrays.copyOf(mIsEssentialSimRecordsLoaded, mNumPhones);
 
         // Load the config for all the phones and re-register callback AFTER padding the arrays.
         for (int phoneId = 0; phoneId < mNumPhones; phoneId++) {
