@@ -54,6 +54,7 @@ import com.qti.extphone.QtiCallForwardInfo;
 import com.qti.extphone.Status;
 
 import java.util.HashMap;
+import java.util.Locale;
 
 public class CallForwardEditPreference extends EditPhoneNumberPreference {
     private static final String LOG_TAG = "CallForwardEditPreference";
@@ -590,7 +591,7 @@ public class CallForwardEditPreference extends EditPhoneNumberPreference {
         if (telephonyManager == null) {
             return "";
         }
-        return telephonyManager.getNetworkCountryIso().toUpperCase();
+        return telephonyManager.getNetworkCountryIso().toUpperCase(Locale.ROOT);
     }
 
     private QtiImsExtListenerBaseImpl imsInterfaceListener =
