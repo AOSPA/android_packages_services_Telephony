@@ -27,6 +27,8 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.telephony.Rlog;
 
+import java.util.Locale;
+
 /**
  * Represents a participant in a conference call.
  */
@@ -200,7 +202,7 @@ public class ConferenceParticipantConnection extends Connection {
         if (country == null) {
             return null;
         }
-        return country.toUpperCase();
+        return country.toUpperCase(Locale.ROOT);
     }
 
     /**

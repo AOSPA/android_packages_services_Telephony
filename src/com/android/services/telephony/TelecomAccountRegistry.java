@@ -79,6 +79,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -959,7 +960,7 @@ public class TelecomAccountRegistry {
                 // Next check whether we're in or near a country that supports it
                 String country =
                         mPhone.getServiceStateTracker().getLocaleTracker()
-                                .getLastKnownCountryIso().toLowerCase();
+                                .getLastKnownCountryIso().toLowerCase(Locale.ROOT);
 
                 String[] supportedCountries = mContext.getResources().getStringArray(
                         R.array.config_simless_emergency_rtt_supported_countries);
