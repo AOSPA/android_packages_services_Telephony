@@ -16,6 +16,11 @@
 
 package com.android.phone.slice;
 
+import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_IN_PROGRESS;
+import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_PURCHASED;
+import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_DISABLED;
+import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ENTITLEMENT_CHECK_FAILED;
+
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -28,6 +33,8 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.AsyncResult;
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.Message;
 import android.os.PersistableBundle;
 import android.telephony.AnomalyReporter;
@@ -40,6 +47,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.WebView;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.Phone;
 
 import java.lang.annotation.Retention;
@@ -245,6 +253,8 @@ public class SlicePurchaseController extends Handler {
             mSlicePurchaseControllerBroadcastReceivers = new HashMap<>();
     /** The current network slicing configuration. */
     @Nullable private NetworkSlicingConfig mSlicingConfig;
+    /** Premium network entitlement query API */
+    @NonNull private final PremiumNetworkEntitlementApi mPremiumNetworkEntitlementApi;
 
     private class SlicePurchaseControllerBroadcastReceiver extends BroadcastReceiver {
         @TelephonyManager.PremiumCapability private final int mCapability;
@@ -281,7 +291,7 @@ public class SlicePurchaseController extends Handler {
                     logd("Slice purchase application canceled for capability: "
                             + TelephonyManager.convertPremiumCapabilityToString(capability));
                     SlicePurchaseController.getInstance(phoneId)
-                            .sendPurchaseResultFromSlicePurchaseApp(capability,
+                            .handlePurchaseResult(capability,
                             TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_USER_CANCELED,
                             true);
                     break;
@@ -297,7 +307,7 @@ public class SlicePurchaseController extends Handler {
                     logd("Purchase premium capability request failed for capability: "
                             + TelephonyManager.convertPremiumCapabilityToString(capability));
                     SlicePurchaseController.getInstance(phoneId)
-                            .sendPurchaseResultFromSlicePurchaseApp(capability,
+                            .handlePurchaseResult(capability,
                             TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_REQUEST_FAILED,
                             false);
                     break;
@@ -307,7 +317,7 @@ public class SlicePurchaseController extends Handler {
                             + "subscription for capability: "
                             + TelephonyManager.convertPremiumCapabilityToString(capability));
                     SlicePurchaseController.getInstance(phoneId)
-                            .sendPurchaseResultFromSlicePurchaseApp(capability,
+                            .handlePurchaseResult(capability,
                             TelephonyManager
                                     .PURCHASE_PREMIUM_CAPABILITY_RESULT_NOT_DEFAULT_DATA_SUB,
                             false);
@@ -340,7 +350,9 @@ public class SlicePurchaseController extends Handler {
         //  that dismiss notifications and update SlicePurchaseController instance
         int phoneId = phone.getPhoneId();
         if (sInstances.get(phoneId) == null) {
-            sInstances.put(phoneId, new SlicePurchaseController(phone));
+            HandlerThread handlerThread = new HandlerThread("SlicePurchaseController");
+            handlerThread.start();
+            sInstances.put(phoneId, new SlicePurchaseController(phone, handlerThread.getLooper()));
         }
         return sInstances.get(phoneId);
     }
@@ -356,11 +368,14 @@ public class SlicePurchaseController extends Handler {
         return sInstances.get(phoneId);
     }
 
-    private SlicePurchaseController(@NonNull Phone phone) {
-        super(phone.getLooper());
+    @VisibleForTesting
+    public SlicePurchaseController(@NonNull Phone phone, @NonNull Looper looper) {
+        super(looper);
         mPhone = phone;
         // TODO: Create a cached value for slicing config in DataIndication and initialize here
         mPhone.mCi.registerForSlicingConfigChanged(this, EVENT_SLICING_CONFIG_CHANGED, null);
+        mPremiumNetworkEntitlementApi = new PremiumNetworkEntitlementApi(mPhone,
+                getCarrierConfigs());
     }
 
     @Override
@@ -458,7 +473,7 @@ public class SlicePurchaseController extends Handler {
         }
         if (!isPremiumCapabilitySupportedByCarrier(capability)) {
             sendPurchaseResult(capability,
-                    TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_DISABLED,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_DISABLED,
                     onComplete);
             return;
         }
@@ -470,7 +485,7 @@ public class SlicePurchaseController extends Handler {
         }
         if (isSlicingConfigActive(capability)) {
             sendPurchaseResult(capability,
-                    TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_PURCHASED,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_PURCHASED,
                     onComplete);
             return;
         }
@@ -492,17 +507,10 @@ public class SlicePurchaseController extends Handler {
                     onComplete);
             return;
         }
-        if (isNetworkCongested(capability)) {
-            throttleCapability(capability, getThrottleDuration(
-                    TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_NETWORK_CONGESTED));
-            sendPurchaseResult(capability,
-                    TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_NETWORK_CONGESTED,
-                    onComplete);
-            return;
-        }
+
         if (mPendingPurchaseCapabilities.containsKey(capability)) {
             sendPurchaseResult(capability,
-                    TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_IN_PROGRESS,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_IN_PROGRESS,
                     onComplete);
             return;
         }
@@ -525,7 +533,7 @@ public class SlicePurchaseController extends Handler {
         onComplete.sendToTarget();
     }
 
-    private void sendPurchaseResultFromSlicePurchaseApp(
+    private void handlePurchaseResult(
             @TelephonyManager.PremiumCapability int capability,
             @TelephonyManager.PurchasePremiumCapabilityResult int result, boolean throttle) {
         mPhone.getContext().unregisterReceiver(
@@ -569,6 +577,37 @@ public class SlicePurchaseController extends Handler {
 
     private void onDisplayBoosterNotification(@TelephonyManager.PremiumCapability int capability,
             @NonNull String appName) {
+        PremiumNetworkEntitlementResponse premiumNetworkEntitlementResponse =
+                mPremiumNetworkEntitlementApi.checkEntitlementStatus(capability);
+
+        /* invalid response for entitlement check */
+        if (premiumNetworkEntitlementResponse == null) {
+            logd("Invalid response for entitlement check.");
+            handlePurchaseResult(capability,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_ENTITLEMENT_CHECK_FAILED, true);
+            return;
+        }
+
+        if (premiumNetworkEntitlementResponse.isProvisioned()) {
+            logd("Entitlement Check: Already provisioned.");
+            handlePurchaseResult(capability,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_PURCHASED, true);
+            return;
+        }
+
+        if (premiumNetworkEntitlementResponse.isProvisioningInProgress()) {
+            logd("Entitlement Check: In Progress");
+            handlePurchaseResult(capability,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_IN_PROGRESS, true);
+            return;
+        }
+
+        if (!premiumNetworkEntitlementResponse.isPremiumNetworkCapabilityAllowed()) {
+            handlePurchaseResult(capability,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_ENTITLEMENT_CHECK_FAILED, true);
+            return;
+        }
+
         // Start timeout for purchase completion.
         long timeout = getCarrierConfigs().getLong(CarrierConfigManager
                 .KEY_PREMIUM_CAPABILITY_NOTIFICATION_DISPLAY_TIMEOUT_MILLIS_LONG);
@@ -639,7 +678,7 @@ public class SlicePurchaseController extends Handler {
         logd("Broadcasting timeout intent to SlicePurchaseBroadcastReceiver.");
         mPhone.getContext().sendBroadcast(intent);
 
-        sendPurchaseResultFromSlicePurchaseApp(
+        handlePurchaseResult(
                 capability, TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_TIMEOUT, true);
     }
 
@@ -652,7 +691,7 @@ public class SlicePurchaseController extends Handler {
             reportAnomaly(UUID_UNKNOWN_FAILURE_CODE,
                     "Failure code needs to be added for: " + failureReason);
         }
-        sendPurchaseResultFromSlicePurchaseApp(capability,
+        handlePurchaseResult(capability,
                 TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_ERROR, true);
     }
 
@@ -667,7 +706,7 @@ public class SlicePurchaseController extends Handler {
         logd("Waiting " + TimeUnit.MILLISECONDS.toMinutes(setupDuration) + " minutes for the "
                 + "network to set up the slicing configuration.");
         sendMessageDelayed(obtainMessage(EVENT_SETUP_TIMEOUT, capability), setupDuration);
-        sendPurchaseResultFromSlicePurchaseApp(
+        handlePurchaseResult(
                 capability, TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_SUCCESS, false);
     }
 
@@ -693,7 +732,7 @@ public class SlicePurchaseController extends Handler {
             return getCarrierConfigs().getLong(CarrierConfigManager
                     .KEY_PREMIUM_CAPABILITY_NOTIFICATION_BACKOFF_HYSTERESIS_TIME_MILLIS_LONG);
         }
-        if (result == TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_NETWORK_CONGESTED
+        if (result == TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ENTITLEMENT_CHECK_FAILED
                 || result == TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_ERROR) {
             return getCarrierConfigs().getLong(CarrierConfigManager
                     .KEY_PREMIUM_CAPABILITY_PURCHASE_CONDITION_BACKOFF_HYSTERESIS_TIME_MILLIS_LONG);
@@ -767,11 +806,6 @@ public class SlicePurchaseController extends Handler {
                         CarrierConfigManager.KEY_PREMIUM_CAPABILITY_SUPPORTED_ON_LTE_BOOL);
         }
         return false;
-    }
-
-    private boolean isNetworkCongested(@TelephonyManager.PremiumCapability int capability) {
-        // TODO: Implement TS43
-        return true;
     }
 
     /**
