@@ -16,6 +16,8 @@
 
 package com.android.services.telephony;
 
+import static android.telephony.TelephonyManager.HAL_SERVICE_VOICE;
+
 import android.annotation.NonNull;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -239,6 +241,7 @@ public class TelephonyConnectionService extends ConnectionService {
     @VisibleForTesting
     public interface SubscriptionManagerProxy {
         int getDefaultVoicePhoneId();
+        int getDefaultDataPhoneId();
         int getSimStateForSlotIdx(int slotId);
         int getPhoneId(int subId);
     }
@@ -266,6 +269,11 @@ public class TelephonyConnectionService extends ConnectionService {
         @Override
         public int getDefaultVoicePhoneId() {
             return SubscriptionManager.getDefaultVoicePhoneId();
+        }
+
+        @Override
+        public int getDefaultDataPhoneId() {
+            return getPhoneId(SubscriptionManager.getDefaultDataSubscriptionId());
         }
 
         @Override
@@ -407,7 +415,8 @@ public class TelephonyConnectionService extends ConnectionService {
         @Override
         public PhoneAccountHandle makePstnPhoneAccountHandleWithPrefix(Phone phone, String prefix,
                 boolean isEmergency) {
-            return PhoneUtils.makePstnPhoneAccountHandleWithPrefix(phone, prefix, isEmergency);
+            return PhoneUtils.makePstnPhoneAccountHandleWithPrefix(
+                    phone, prefix, isEmergency, phone.getUserHandle());
         }
     };
 
@@ -1049,7 +1058,8 @@ public class TelephonyConnectionService extends ConnectionService {
                     // an isTesting parameter. For HAL 1.4+, do not wait for IN_SERVICE, this will
                     // be handled at the RIL/vendor level by emergencyDial(...).
                     boolean waitForInServiceToDialEmergency = isTestEmergencyNumber
-                            && phone.getHalVersion().less(RIL.RADIO_HAL_VERSION_1_4);
+                            && phone.getHalVersion(HAL_SERVICE_VOICE)
+                            .less(RIL.RADIO_HAL_VERSION_1_4);
                     if (isEmergencyNumber && !waitForInServiceToDialEmergency) {
                         // We currently only look to make sure that the radio is on before dialing.
                         // We should be able to make emergency calls at any time after the radio has
@@ -2721,39 +2731,57 @@ public class TelephonyConnectionService extends ConnectionService {
     /**
      * Retrieves the most sensible Phone to use for an emergency call using the following Priority
      *  list (for multi-SIM devices):
-     *  1) The User's SIM preference for Voice calling
-     *  2) The First Phone that is currently IN_SERVICE or is available for emergency calling
-     *  3) Prioritize phones that have the dialed emergency number as part of their emergency
+     *  1) The Phone that is in emergency SMS mode
+     *  2) The phone based on User's SIM preference of Voice calling or Data in order
+     *  3) The First Phone that is currently IN_SERVICE or is available for emergency calling
+     *  4) Prioritize phones that have the dialed emergency number as part of their emergency
      *     number list
-     *  4) If there is a PUK locked SIM, compare the SIMs that are not PUK locked. If all the SIMs
-     *     are locked, skip to condition 5).
-     *  5) The Phone with more Capabilities.
-     *  6) The First Phone that has a SIM card in it (Starting from Slot 0...N)
-     *  7) The Default Phone (Currently set as Slot 0)
+     *  5) If there is a PUK locked SIM, compare the SIMs that are not PUK locked. If all the SIMs
+     *     are locked, skip to condition 6).
+     *  6) The Phone with more Capabilities.
+     *  7) The First Phone that has a SIM card in it (Starting from Slot 0...N)
+     *  8) The Default Phone (Currently set as Slot 0)
      */
     @VisibleForTesting
+    @NonNull
     public Phone getFirstPhoneForEmergencyCall(List<Phone> phonesWithEmergencyNumber) {
-        // 1)
+        int phoneCount = mTelephonyManagerProxy.getPhoneCount();
+        for (int i = 0; i < phoneCount; i++) {
+            Phone phone = mPhoneFactoryProxy.getPhone(i);
+            // 1)
+            if (phone != null && phone.isInEmergencySmsMode()) {
+                if (isAvailableForEmergencyCalls(phone)) {
+                    if (phonesWithEmergencyNumber == null
+                            || phonesWithEmergencyNumber.contains(phone)) {
+                        return phone;
+                    }
+                }
+            }
+        }
+
+        // 2)
         int phoneId = mSubscriptionManagerProxy.getDefaultVoicePhoneId();
+        if (phoneId == SubscriptionManager.INVALID_PHONE_INDEX) {
+            phoneId = mSubscriptionManagerProxy.getDefaultDataPhoneId();
+        }
         if (phoneId != SubscriptionManager.INVALID_PHONE_INDEX) {
-            Phone defaultPhone = mPhoneFactoryProxy.getPhone(phoneId);
-            if (defaultPhone != null && isAvailableForEmergencyCalls(defaultPhone)) {
+            Phone selectedPhone = mPhoneFactoryProxy.getPhone(phoneId);
+            if (selectedPhone != null && isAvailableForEmergencyCalls(selectedPhone)) {
                 if (phonesWithEmergencyNumber == null
-                        || phonesWithEmergencyNumber.contains(defaultPhone)) {
-                    return defaultPhone;
+                        || phonesWithEmergencyNumber.contains(selectedPhone)) {
+                    return selectedPhone;
                 }
             }
         }
 
         Phone firstPhoneWithSim = null;
-        int phoneCount = mTelephonyManagerProxy.getPhoneCount();
         List<SlotStatus> phoneSlotStatus = new ArrayList<>(phoneCount);
         for (int i = 0; i < phoneCount; i++) {
             Phone phone = mPhoneFactoryProxy.getPhone(i);
             if (phone == null) {
                 continue;
             }
-            // 2)
+            // 3)
             if (isAvailableForEmergencyCalls(phone)) {
                 if (phonesWithEmergencyNumber == null
                         || phonesWithEmergencyNumber.contains(phone)) {
@@ -2763,7 +2791,7 @@ public class TelephonyConnectionService extends ConnectionService {
                     return phone;
                 }
             }
-            // 5)
+            // 6)
             // Store the RAF Capabilities for sorting later.
             int radioAccessFamily = phone.getRadioAccessFamily();
             SlotStatus status = new SlotStatus(i, radioAccessFamily, phone.getSubId());
@@ -2771,7 +2799,7 @@ public class TelephonyConnectionService extends ConnectionService {
             Log.i(this, "getFirstPhoneForEmergencyCall, RAF:" +
                 Integer.toHexString(radioAccessFamily) + " saved for Phone Id:" + i + " subId:"
                 + phone.getSubId());
-            // 4)
+            // 5)
             // Report Slot's PIN/PUK lock status for sorting later.
             int simState = mSubscriptionManagerProxy.getSimStateForSlotIdx(i);
             // Record SimState.
@@ -2781,7 +2809,7 @@ public class TelephonyConnectionService extends ConnectionService {
                 status.isLocked = true;
             }
 
-            // 3) Store if the Phone has the corresponding emergency number
+            // 4) Store if the Phone has the corresponding emergency number
             if (phonesWithEmergencyNumber != null) {
                 for (Phone phoneWithEmergencyNumber : phonesWithEmergencyNumber) {
                     if (phoneWithEmergencyNumber != null
@@ -2790,7 +2818,7 @@ public class TelephonyConnectionService extends ConnectionService {
                     }
                 }
             }
-            // 6)
+            // 7)
             if (firstPhoneWithSim == null &&
                 (phone.getSubId() != SubscriptionManager.INVALID_SIM_SLOT_INDEX)) {
                 // The slot has a SIM card inserted (and an active subscription), but is not in
@@ -2802,16 +2830,21 @@ public class TelephonyConnectionService extends ConnectionService {
                     firstPhoneWithSim.getPhoneId());
             }
         }
-        // 7)
+        // 8)
         if (firstPhoneWithSim == null && phoneSlotStatus.isEmpty()) {
-            if (phonesWithEmergencyNumber == null || phonesWithEmergencyNumber.isEmpty()) {
-                // No Phones available, get the default
-                Log.i(this, "getFirstPhoneForEmergencyCall, return default phone");
-                return  mPhoneFactoryProxy.getDefaultPhone();
+            if (phonesWithEmergencyNumber != null) {
+                for (Phone phoneWithEmergencyNumber : phonesWithEmergencyNumber) {
+                    if (phoneWithEmergencyNumber != null) {
+                        return phoneWithEmergencyNumber;
+                    }
+                }
             }
-            return phonesWithEmergencyNumber.get(0);
+
+            // No Phones available, get the default
+            Log.i(this, "getFirstPhoneForEmergencyCall, return default phone");
+            return  mPhoneFactoryProxy.getDefaultPhone();
         } else {
-            // 5)
+            // 6)
             final int defaultPhoneId = mPhoneFactoryProxy.getDefaultPhone().getPhoneId();
             final Phone firstOccupiedSlot = firstPhoneWithSim;
             if (!phoneSlotStatus.isEmpty()) {
@@ -2874,7 +2907,7 @@ public class TelephonyConnectionService extends ConnectionService {
                         "with highest capability");
                 return mPhoneFactoryProxy.getPhone(mostCapablePhoneId);
             } else {
-                // 6)
+                // 7)
                 return firstPhoneWithSim;
             }
         }

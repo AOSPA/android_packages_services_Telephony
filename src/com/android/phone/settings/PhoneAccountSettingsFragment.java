@@ -6,9 +6,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Icon;
+import android.os.Binder;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.UserHandle;
 import android.os.UserManager;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
@@ -406,6 +408,7 @@ public class PhoneAccountSettingsFragment extends PreferenceFragment
                 mTelecomManager.getCallCapablePhoneAccounts(includeDisabledAccounts);
         for (Iterator<PhoneAccountHandle> i = accountHandles.iterator(); i.hasNext();) {
             PhoneAccountHandle handle = i.next();
+            UserHandle userHandle = handle.getUserHandle();
             if (handle.equals(emergencyAccountHandle)) {
                 // never include emergency call accounts in this piece of code.
                 i.remove();
@@ -418,6 +421,11 @@ public class PhoneAccountSettingsFragment extends PreferenceFragment
             } else if (!includeSims &&
                     account.hasCapabilities(PhoneAccount.CAPABILITY_SIM_SUBSCRIPTION)) {
                 i.remove();
+            } else if (!userHandle.equals(Binder.getCallingUserHandle())
+                    && !account.hasCapabilities(PhoneAccount.CAPABILITY_MULTI_USER)) {
+                // Only show accounts for the current user (unless account has
+                // CAPABILITY_MULTI_USER).
+                i.remove();
             }
         }
         return accountHandles;
@@ -429,7 +437,7 @@ public class PhoneAccountSettingsFragment extends PreferenceFragment
 
     private PhoneAccountHandle getEmergencyPhoneAccount() {
         return PhoneUtils.makePstnPhoneAccountHandleWithPrefix(
-                (Phone) null, "" /* prefix */, true /* isEmergency */);
+                (Phone) null, "" /* prefix */, true /* isEmergency */, null /* userHandle */);
     }
 
     public static Intent buildPhoneAccountConfigureIntent(
