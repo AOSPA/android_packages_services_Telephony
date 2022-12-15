@@ -17,6 +17,7 @@
 package com.android.phone;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.telephony.TelephonyManager.HAL_SERVICE_RADIO;
 
 import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_CDMA;
 import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_GSM;
@@ -3221,7 +3222,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                 // Get default phone in this case.
                 phoneId = SubscriptionManager.DEFAULT_PHONE_INDEX;
             }
-            final int subId = mSubscriptionController.getSubIdUsingPhoneId(phoneId);
+            final int subId = mSubscriptionController.getSubId(phoneId);
             Phone phone = PhoneFactory.getPhone(phoneId);
             if (phone == null) return "";
             ServiceStateTracker sst = phone.getServiceStateTracker();
@@ -5975,11 +5976,9 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     public boolean setBoundImsServiceOverride(int slotIndex, boolean isCarrierService,
             int[] featureTypes, String packageName) {
-        int[] subIds = SubscriptionManager.getSubId(slotIndex);
         TelephonyPermissions.enforceShellOnly(Binder.getCallingUid(), "setBoundImsServiceOverride");
         TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
-                (subIds != null ? subIds[0] : SubscriptionManager.INVALID_SUBSCRIPTION_ID),
-                "setBoundImsServiceOverride");
+                SubscriptionManager.getSubscriptionId(slotIndex), "setBoundImsServiceOverride");
 
         final long identity = Binder.clearCallingIdentity();
         try {
@@ -6009,12 +6008,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     @Override
     public boolean clearCarrierImsServiceOverride(int slotIndex) {
-        int[] subIds = SubscriptionManager.getSubId(slotIndex);
         TelephonyPermissions.enforceShellOnly(Binder.getCallingUid(),
                 "clearCarrierImsServiceOverride");
         TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
-                (subIds != null ? subIds[0] : SubscriptionManager.INVALID_SUBSCRIPTION_ID),
-                "clearCarrierImsServiceOverride");
+                SubscriptionManager.getSubscriptionId(slotIndex), "clearCarrierImsServiceOverride");
 
         final long identity = Binder.clearCallingIdentity();
         try {
@@ -6039,11 +6036,9 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     public String getBoundImsServicePackage(int slotId, boolean isCarrierImsService,
             @ImsFeature.FeatureType int featureType) {
-        int[] subIds = SubscriptionManager.getSubId(slotId);
         TelephonyPermissions
-                .enforceCallingOrSelfReadPrivilegedPhoneStatePermissionOrCarrierPrivilege(
-                mApp, (subIds != null ? subIds[0] : SubscriptionManager.INVALID_SUBSCRIPTION_ID),
-                "getBoundImsServicePackage");
+                .enforceCallingOrSelfReadPrivilegedPhoneStatePermissionOrCarrierPrivilege(mApp,
+                        SubscriptionManager.getSubscriptionId(slotId), "getBoundImsServicePackage");
 
         final long identity = Binder.clearCallingIdentity();
         try {
@@ -6660,6 +6655,17 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
             @TelephonyManager.NetworkTypeBitMask long allowedNetworkTypes) {
         TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(
                 mApp, subId, "setAllowedNetworkTypesForReason");
+        // If the caller only has carrier privileges, then they should not be able to override
+        // any network types which were set for security reasons.
+        if (mApp.checkCallingOrSelfPermission(Manifest.permission.MODIFY_PHONE_STATE)
+                != PERMISSION_GRANTED
+                && (reason == TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_ENABLE_2G
+                || reason == TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_USER_RESTRICTIONS)) {
+            throw new SecurityException(
+                    "setAllowedNetworkTypesForReason cannot be called with carrier privileges for"
+                            + " reason "
+                            + reason);
+        }
         if (!TelephonyManager.isValidAllowedNetworkTypesReason(reason)) {
             loge("setAllowedNetworkTypesForReason: Invalid allowed network type reason: " + reason);
             return false;
@@ -9793,12 +9799,22 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
     /**
      * Get the IRadio HAL Version
+     * @deprecated use getHalVersion instead
      */
+    @Deprecated
     @Override
     public int getRadioHalVersion() {
+        return getHalVersion(HAL_SERVICE_RADIO);
+    }
+
+    /**
+     * Get the HAL Version of a specific service
+     */
+    @Override
+    public int getHalVersion(int service) {
         Phone phone = getDefaultPhone();
         if (phone == null) return -1;
-        HalVersion hv = phone.getHalVersion();
+        HalVersion hv = phone.getHalVersion(service);
         if (hv.equals(HalVersion.UNKNOWN)) return -1;
         return hv.major * 100 + hv.minor;
     }
