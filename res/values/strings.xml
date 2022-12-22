@@ -2083,6 +2083,9 @@
     <!-- Title for controlling on/off for Mobile phone's radio power. Only shown in diagnostic screen, so precise translation is not needed. -->
     <string name="radio_info_radio_power">Mobile Radio Power</string>
 
+    <!-- Title for simulating device out of service. -->
+    <string name="simulate_out_of_service_string">Simulate Out of Service (Debug Build only)</string>
+
     <!-- Phone Info screen. Menu item label.  Used for diagnostic info screens, precise translation isn't needed -->
     <string name="radioInfo_menu_viewADN">View SIM Address Book</string>
     <!-- Phone Info screen. Menu item label.  Used for diagnostic info screens, precise translation isn't needed -->
@@ -2271,6 +2274,7 @@
     <!-- Telephony notification channel name for a channel containing SIP accounts removed
      notificatios -->
     <string name="notification_channel_sip_account">Deprecated SIP accounts</string>
+
     <string name="labelCommonMore">Call settings</string>
     <string name="labelCommonMore_with_label">Call settings (<xliff:g id="subscriptionlabel" example="T-Mobile">%s</xliff:g>)</string>
     <string name="sum_common_call_settings">Additional call settings</string>

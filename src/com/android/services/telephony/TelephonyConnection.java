@@ -102,6 +102,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -1812,7 +1813,8 @@ abstract class TelephonyConnection extends Connection implements Holdable,
         if (filteredCnapNames != null) {
             long cnapNameMatches = Arrays.asList(filteredCnapNames)
                     .stream()
-                    .filter(filteredCnapName -> filteredCnapName.equals(cnapName.toUpperCase()))
+                    .filter(filteredCnapName -> filteredCnapName.equals(
+                            cnapName.toUpperCase(Locale.ROOT)))
                     .count();
             if (cnapNameMatches > 0) {
                 Log.i(this, "filterCnapName: Filtered CNAP Name: " + cnapName);
@@ -2012,8 +2014,10 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                     for (com.android.internal.telephony.Connection conn : connections) {
                         if (conn instanceof ImsPhoneConnection) {
                             ImsCall bgCall = ((ImsPhoneConnection)conn).getImsCall();
-                            isCurrentBgVideoCall |= bgCall.isVideoCall();
-                            wasBgVideoCall |= bgCall.wasVideoCall();
+                            if (bgCall != null) {
+                                isCurrentBgVideoCall |= bgCall.isVideoCall();
+                                wasBgVideoCall |= bgCall.wasVideoCall();
+                            }
                         }
                     }
 

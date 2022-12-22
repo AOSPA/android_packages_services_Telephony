@@ -579,7 +579,7 @@
     <string name="onscreenEndCallText" msgid="6138725377654842757">"Finalizar"</string>
     <string name="onscreenShowDialpadText" msgid="658465753816164079">"Teclado"</string>
     <string name="onscreenMuteText" msgid="5470306116733843621">"Desativar som"</string>
-    <string name="onscreenAddCallText" msgid="9075675082903611677">"Adicionar chamada"</string>
+    <string name="onscreenAddCallText" msgid="9075675082903611677">"Adicionar ligação"</string>
     <string name="onscreenMergeCallsText" msgid="3692389519611225407">"Juntar chamadas"</string>
     <string name="onscreenSwapCallsText" msgid="2682542150803377991">"Trocar"</string>
     <string name="onscreenManageCallsText" msgid="1162047856081836469">"Gerenciar chamadas"</string>
@@ -837,6 +837,7 @@
     <string name="dsds_dialog_cancel" msgid="3245958947099586655">"Cancelar"</string>
     <string name="removable_esim_string" msgid="7931369811671787649">"Definir eSIM removível como padrão"</string>
     <string name="radio_info_radio_power" msgid="8805595022160471587">"Potência do rádio celular"</string>
+    <string name="simulate_out_of_service_string" msgid="7787925611727597193">"Simular o modo fora de serviço (somente build de depuração)"</string>
     <string name="radioInfo_menu_viewADN" msgid="4533179730908559846">"Ver o catálogo de endereços do chip"</string>
     <string name="radioInfo_menu_viewFDN" msgid="1847236480527032061">"Ver números de discagem fixa"</string>
     <string name="radioInfo_menu_viewSDN" msgid="2613431584522392842">"Ver números de discagem do serviço"</string>

@@ -1153,7 +1153,11 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
     @Nullable
     private PersistableBundle restoreConfigFromXml(@Nullable String packageName,
             @NonNull String extraString, int phoneId) {
-        return restoreConfigFromXml(packageName, extraString, phoneId, false);
+        if (SubscriptionManager.isValidPhoneId(phoneId)) {
+            return restoreConfigFromXml(packageName, extraString, phoneId, false);
+        } else {
+            return null;
+        }
     }
 
     @Nullable
@@ -1183,10 +1187,22 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
         });
         if (packageFiles == null || packageFiles.length < 1) return false;
         for (File f : packageFiles) {
-            logd("Deleting " + f.getName());
+            logd("Deleting " + getFilePathForLogging(f.getName()));
             f.delete();
         }
         return true;
+    }
+
+    private String getFilePathForLogging(String filePath) {
+        if (!TextUtils.isEmpty(filePath)) {
+            String[] fileTokens = filePath.split("-");
+            if (fileTokens != null && fileTokens.length > 2) {
+                String iccid = fileTokens[fileTokens.length -2];
+                return getFilePathForLogging(filePath, iccid);
+            }
+            return filePath;
+        }
+        return filePath;
     }
 
     /** Builds a canonical file name for a config file. */
@@ -1269,6 +1285,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
         mHasSentConfigChange = Arrays.copyOf(mHasSentConfigChange, mNumPhones);
         mFromSystemUnlocked = Arrays.copyOf(mFromSystemUnlocked, mNumPhones);
         mCarrierServiceChangeCallbacks = Arrays.copyOf(mCarrierServiceChangeCallbacks, mNumPhones);
+        mIsEssentialSimRecordsLoaded = Arrays.copyOf(mIsEssentialSimRecordsLoaded, mNumPhones);
 
         // Load the config for all the phones and re-register callback AFTER padding the arrays.
         for (int phoneId = 0; phoneId < mNumPhones; phoneId++) {

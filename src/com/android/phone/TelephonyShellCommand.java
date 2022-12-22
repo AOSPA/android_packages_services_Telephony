@@ -21,6 +21,8 @@ import static com.android.internal.telephony.d2d.Communicator.MESSAGE_CALL_RADIO
 import static com.android.internal.telephony.d2d.Communicator.MESSAGE_DEVICE_BATTERY_STATE;
 import static com.android.internal.telephony.d2d.Communicator.MESSAGE_DEVICE_NETWORK_COVERAGE;
 
+import static java.util.Map.entry;
+
 import android.Manifest;
 import android.content.Context;
 import android.net.Uri;
@@ -61,7 +63,6 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -179,8 +180,6 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
             "get-allowed-network-types-for-users";
     private static final String SET_ALLOWED_NETWORK_TYPES_FOR_USER =
             "set-allowed-network-types-for-users";
-    // Check if telephony new data stack is enabled.
-    private static final String GET_DATA_MODE = "get-data-mode";
     private static final String GET_IMEI = "get-imei";
     private static final String GET_SIM_SLOTS_MAPPING = "get-sim-slots-mapping";
     // Take advantage of existing methods that already contain permissions checks when possible.
@@ -206,33 +205,32 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
     // For instance: "xxxx_string", "xxxx_string_array", etc.
     // The carrier config keys in this map does not follow this convention. It is therefore not
     // possible to infer the type for these keys by looking at the string.
-    private static final Map<String, CcType> CC_TYPE_MAP = new HashMap<String, CcType>() {{
-            put(CarrierConfigManager.Gps.KEY_A_GLONASS_POS_PROTOCOL_SELECT_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_ES_EXTENSION_SEC_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_GPS_LOCK_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_LPP_PROFILE_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_NFW_PROXY_APPS_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_SUPL_ES_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_SUPL_HOST_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_SUPL_MODE_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_SUPL_PORT_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_SUPL_VER_STRING, CcType.STRING);
-            put(CarrierConfigManager.Gps.KEY_USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL_STRING,
-                    CcType.STRING);
-            put(CarrierConfigManager.KEY_CARRIER_APP_NO_WAKE_SIGNAL_CONFIG_STRING_ARRAY,
-                    CcType.STRING_ARRAY);
-            put(CarrierConfigManager.KEY_CARRIER_APP_WAKE_SIGNAL_CONFIG_STRING_ARRAY,
-                    CcType.STRING_ARRAY);
-            put(CarrierConfigManager.KEY_CARRIER_CALL_SCREENING_APP_STRING, CcType.STRING);
-            put(CarrierConfigManager.KEY_MMS_EMAIL_GATEWAY_NUMBER_STRING, CcType.STRING);
-            put(CarrierConfigManager.KEY_MMS_HTTP_PARAMS_STRING, CcType.STRING);
-            put(CarrierConfigManager.KEY_MMS_NAI_SUFFIX_STRING, CcType.STRING);
-            put(CarrierConfigManager.KEY_MMS_UA_PROF_TAG_NAME_STRING, CcType.STRING);
-            put(CarrierConfigManager.KEY_MMS_UA_PROF_URL_STRING, CcType.STRING);
-            put(CarrierConfigManager.KEY_MMS_USER_AGENT_STRING, CcType.STRING);
-            put(CarrierConfigManager.KEY_RATCHET_RAT_FAMILIES, CcType.STRING_ARRAY);
-        }
-    };
+    private static final Map<String, CcType> CC_TYPE_MAP = Map.ofEntries(
+            entry(CarrierConfigManager.Gps.KEY_A_GLONASS_POS_PROTOCOL_SELECT_STRING,
+                    CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_ES_EXTENSION_SEC_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_GPS_LOCK_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_LPP_PROFILE_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_NFW_PROXY_APPS_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_SUPL_ES_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_SUPL_HOST_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_SUPL_MODE_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_SUPL_PORT_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_SUPL_VER_STRING, CcType.STRING),
+            entry(CarrierConfigManager.Gps.KEY_USE_EMERGENCY_PDN_FOR_EMERGENCY_SUPL_STRING,
+                    CcType.STRING),
+            entry(CarrierConfigManager.KEY_CARRIER_APP_NO_WAKE_SIGNAL_CONFIG_STRING_ARRAY,
+                    CcType.STRING_ARRAY),
+            entry(CarrierConfigManager.KEY_CARRIER_APP_WAKE_SIGNAL_CONFIG_STRING_ARRAY,
+                    CcType.STRING_ARRAY),
+            entry(CarrierConfigManager.KEY_CARRIER_CALL_SCREENING_APP_STRING, CcType.STRING),
+            entry(CarrierConfigManager.KEY_MMS_EMAIL_GATEWAY_NUMBER_STRING, CcType.STRING),
+            entry(CarrierConfigManager.KEY_MMS_HTTP_PARAMS_STRING, CcType.STRING),
+            entry(CarrierConfigManager.KEY_MMS_NAI_SUFFIX_STRING, CcType.STRING),
+            entry(CarrierConfigManager.KEY_MMS_UA_PROF_TAG_NAME_STRING, CcType.STRING),
+            entry(CarrierConfigManager.KEY_MMS_UA_PROF_URL_STRING, CcType.STRING),
+            entry(CarrierConfigManager.KEY_MMS_USER_AGENT_STRING, CcType.STRING),
+            entry(CarrierConfigManager.KEY_RATCHET_RAT_FAMILIES, CcType.STRING_ARRAY));
 
     /**
      * Map from a shorthand string to the feature tags required in registration required in order
@@ -337,8 +335,6 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
             case GET_ALLOWED_NETWORK_TYPES_FOR_USER:
             case SET_ALLOWED_NETWORK_TYPES_FOR_USER:
                 return handleAllowedNetworkTypesCommand(cmd);
-            case GET_DATA_MODE:
-                return handleGetDataMode();
             case GET_IMEI:
                 return handleGetImei();
             case GET_SIM_SLOTS_MAPPING:
@@ -1182,7 +1178,7 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
             return 0;
         }
 
-        boolean isEnabled = "true".equals(arg.toLowerCase());
+        boolean isEnabled = "true".equals(arg.toLowerCase(Locale.ROOT));
         try {
             mInterface.setDeviceToDeviceForceEnabled(isEnabled);
         } catch (RemoteException e) {
@@ -2950,24 +2946,6 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
             Log.e(LOG_TAG, "AllowedNetworkTypes: " + e);
             return -1;
         }
-    }
-
-    private int handleGetDataMode() {
-        if (!checkShellUid()) {
-            return -1;
-        }
-
-        boolean newDataStackEnabled = false;
-        try {
-            newDataStackEnabled = mInterface.isUsingNewDataStack();
-        } catch (RemoteException e) {
-            getOutPrintWriter().println("Something went wrong. " + e);
-            return -1;
-        }
-
-        getOutPrintWriter().println("Telephony is running with the "
-                + (newDataStackEnabled ? "new" : "old") + " data stack.");
-        return 0;
     }
 
     private int handleRadioSetModemServiceCommand() {

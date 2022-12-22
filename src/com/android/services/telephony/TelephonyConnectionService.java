@@ -79,18 +79,20 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
+
+import org.codeaurora.ims.QtiCallConstants;
 
 /**
  * Service for making GSM and CDMA connections.
@@ -158,6 +160,15 @@ public class TelephonyConnectionService extends ConnectionService {
                     maybeIndicateAnsweringWillDisconnect((TelephonyConnection)ringingConnection,
                             ringingConnection.getPhoneAccountHandle());
                 }
+
+                // Update context based switch based on the DSDA/DSDS scenario
+                final boolean shallDisableContextBasedSwap = isConcurrentCallsPossible();
+                for (Connection current : getAllConnections()) {
+                    if (current instanceof TelephonyConnection) {
+                        ((TelephonyConnection) current).disableContextBasedSwap(
+                                shallDisableContextBasedSwap);
+                    }
+                }
             }
         }
     };
@@ -179,6 +190,8 @@ public class TelephonyConnectionService extends ConnectionService {
     private AnswerAndReleaseHandler mAnswerAndReleaseHandler = null;
     /** Handler for hold across sub use case */
     private HoldHandlerBase mHoldHandler = null;
+    /** UNKNOWN original call type for video CRS. */
+    public static final int CALL_TYPE_UNKNOWN = -1;
 
     // Contains one TelephonyConnection that has placed a call and a memory of which Phones it has
     // already tried to connect with. There should be only one TelephonyConnection trying to place a
@@ -275,7 +288,18 @@ public class TelephonyConnectionService extends ConnectionService {
         int getPhoneCount();
         boolean isCurrentEmergencyNumber(String number);
         Map<Integer, List<EmergencyNumber>> getCurrentEmergencyNumberList();
+
+        /**
+         * Determines whether concurrent IMS calls across both SIMs are possible, based on whether
+         * the device is DSDA capable, or if the DSDS device supports virtual DSDA.
+         */
         boolean isConcurrentCallsPossible();
+
+        /**
+         * Gets the maximum number of SIMs that can be active, based on the device's multisim
+         * configuration. Returns 1 for DSDS, 2 for DSDA.
+         */
+        int getMaxNumberOfSimultaneouslyActiveSims();
     }
 
     private TelephonyManagerProxy mTelephonyManagerProxy;
@@ -312,8 +336,22 @@ public class TelephonyConnectionService extends ConnectionService {
         }
 
         @Override
+        public int getMaxNumberOfSimultaneouslyActiveSims() {
+            try {
+                return mTelephonyManager.getMaxNumberOfSimultaneouslyActiveSims();
+            } catch (IllegalStateException ise) {
+                return 1;
+            }
+        }
+
+        @Override
         public boolean isConcurrentCallsPossible() {
-            return mTelephonyManager.isConcurrentCallsPossible();
+            try {
+                return mTelephonyManager.isConcurrentCallsPossible()
+                    || mTelephonyManager.getPhoneCapability().getMaxActiveVoiceSubscriptions() > 1;
+            } catch (IllegalStateException ise) {
+                return false;
+            }
         }
     }
 
@@ -1409,6 +1447,11 @@ public class TelephonyConnectionService extends ConnectionService {
                             "Invalid phone type",
                             phone.getPhoneId()));
         }
+        if (!Objects.equals(request.getAccountHandle(), accountHandle)) {
+            Log.i(this, "onCreateOutgoingConnection, update phoneAccountHandle, accountHandle = "
+                    + accountHandle);
+            connection.setPhoneAccountHandle(accountHandle);
+        }
         connection.setAddress(handle, PhoneConstants.PRESENTATION_ALLOWED);
         connection.setTelephonyConnectionInitializing();
         connection.setTelephonyVideoState(request.getVideoState());
@@ -1567,13 +1610,14 @@ public class TelephonyConnectionService extends ConnectionService {
         }
 
         /*
-         * Check if the incoming call is a Voice call and there is no Video call on the other
-         * SUB in which case we do not have to do any special handling and let the incoming
-         * call pass as is.
+         * Check if the incoming call is a Voice call w/ or w/o Video CRS and there is
+         * no Video call on the other SUB in which case we do not have to do any special
+         * handling and let the incoming call pass as is.
          */
         boolean hasConnectedVideoCallOnOtherSub =
                 hasConnectedVideoCallOnOtherSub(incomingHandle);
-        if (!VideoProfile.isVideo(incomingConnection.getVideoState()) &&
+        if ((!VideoProfile.isVideo(incomingConnection.getVideoState()) ||
+                isVideoCrsForVoLteCall(incomingConnection)) &&
                 !hasConnectedVideoCallOnOtherSub) {
             return;
         }
@@ -1606,6 +1650,32 @@ public class TelephonyConnectionService extends ConnectionService {
             disableSwap(incomingConnection, true);
         }
     }
+
+    public boolean isVideoCrsForVoLteCall(TelephonyConnection connection) {
+        return getOriginalCallType(connection) == VideoProfile.STATE_AUDIO_ONLY &&
+                isVideoCrsCall(connection);
+    }
+
+    public boolean isVideoCrsCall(TelephonyConnection connection) {
+        Bundle connExtras = connection.getExtras();
+        if (connExtras == null) {
+            return false;
+        }
+        int crsType = connExtras.getInt(QtiCallConstants.EXTRA_CRS_TYPE,
+                QtiCallConstants.CRS_TYPE_INVALID);
+        return (crsType == (QtiCallConstants.CRS_TYPE_VIDEO
+                    | QtiCallConstants.CRS_TYPE_AUDIO));
+    }
+
+    public int getOriginalCallType(TelephonyConnection connection) {
+        Bundle connExtras = connection.getExtras();
+        if (connExtras == null) {
+            return CALL_TYPE_UNKNOWN;
+        }
+        return connExtras.getInt(QtiCallConstants.EXTRA_ORIGINAL_CALL_TYPE,
+                CALL_TYPE_UNKNOWN);
+    }
+
 
     /**
      * Checks to see if there are video calls present on a sub other than the one passed in.
@@ -2131,7 +2201,7 @@ public class TelephonyConnectionService extends ConnectionService {
             Log.i(this, "retryOutgoingOriginalConnection, redialing on Phone Id: " + newPhoneToUse);
             c.clearOriginalConnection();
             if (phoneId != newPhoneToUse.getPhoneId()) {
-                if (!mTelephonyManagerProxy.isConcurrentCallsPossible()) {
+                if (mTelephonyManagerProxy.getMaxNumberOfSimultaneouslyActiveSims() < 2) {
                     disconnectAllCallsOnOtherSubs(
                             mPhoneUtilsProxy.makePstnPhoneAccountHandle(newPhoneToUse));
                 }
@@ -3102,9 +3172,7 @@ public class TelephonyConnectionService extends ConnectionService {
                        return;
                    }
 
-                   c.sendMessages(new HashSet<Communicator.Message>() {{
-                       add(new Communicator.Message(message, value));
-                   }});
+                   c.sendMessages(Set.of(new Communicator.Message(message, value)));
 
                });
     }
@@ -3146,8 +3214,8 @@ public class TelephonyConnectionService extends ConnectionService {
     }
 
     /**
-     * For the passed in incoming {@link TelephonyConnection}, add
-     * {@link Connection#EXTRA_ANSWERING_DROPS_FG_CALL} if there are ongoing calls on another
+     * For the passed in incoming {@link TelephonyConnection}, for non- dual active voice devices,
+     * adds {@link Connection#EXTRA_ANSWERING_DROPS_FG_CALL} if there are ongoing calls on another
      * subscription (ie phone account handle) than the one passed in.
      * @param connection The connection.
      * @param phoneAccountHandle The {@link PhoneAccountHandle} the incoming call originated on;
@@ -3158,8 +3226,10 @@ public class TelephonyConnectionService extends ConnectionService {
      */
     public void maybeIndicateAnsweringWillDisconnect(@NonNull TelephonyConnection connection,
             @NonNull PhoneAccountHandle phoneAccountHandle) {
-        if (isCallPresentOnOtherSub(phoneAccountHandle) &&
-            !isConcurrentCallsPossible()) {
+        if (mTelephonyManagerProxy.isConcurrentCallsPossible()) {
+            return;
+        }
+        if (isCallPresentOnOtherSub(phoneAccountHandle)) {
             Log.i(this, "maybeIndicateAnsweringWillDisconnect; answering call %s will cause a call "
                     + "on another subscription to drop.", connection.getTelecomCallId());
             Bundle extras = new Bundle();
@@ -3199,37 +3269,46 @@ public class TelephonyConnectionService extends ConnectionService {
 
     /**
      * Where there are ongoing calls on another subscription other than the one specified,
-     * disconnect these calls.  This is used where there is an incoming call on one sub, but there
-     * are ongoing calls on another sub which need to be disconnected.
+     * disconnect these calls for non-DSDA devices. This is used where there is an incoming call on
+     * one sub, but there are ongoing calls on another sub which need to be disconnected.
      * @param incomingHandle The incoming {@link PhoneAccountHandle}.
      */
     public void maybeDisconnectCallsOnOtherSubs(@NonNull PhoneAccountHandle incomingHandle) {
         Log.i(this, "maybeDisconnectCallsOnOtherSubs: check for calls not on %s", incomingHandle);
-        maybeDisconnectCallsOnOtherSubs(getAllConnections(), incomingHandle);
+        maybeDisconnectCallsOnOtherSubs(getAllConnections(), incomingHandle,
+                mTelephonyManagerProxy);
     }
 
     /**
-     * Used by {@link #maybeDisconnectCallsOnOtherSubs(PhoneAccountHandle)} to perform call
-     * disconnection.  This method exists as a convenience so that it is possible to unit test
+     * Used by {@link #maybeDisconnectCallsOnOtherSubs(PhoneAccountHandle)} to evaluate and perform
+     * call disconnection. This method exists as a convenience so that it is possible to unit test
      * the core functionality.
      * @param connections the calls to check.
      * @param incomingHandle the incoming handle.
+     * @param telephonyManagerProxy the proxy to the {@link TelephonyManager} instance.
      */
     @VisibleForTesting
     public static void maybeDisconnectCallsOnOtherSubs(@NonNull Collection<Connection> connections,
-            @NonNull PhoneAccountHandle incomingHandle) {
+            @NonNull PhoneAccountHandle incomingHandle,
+            TelephonyManagerProxy telephonyManagerProxy) {
+        if (telephonyManagerProxy.isConcurrentCallsPossible()) {
+            return;
+        }
         connections.stream()
                 .filter(c ->
                         // Exclude multiendpoint calls as they're not on this device.
-                        (c.getConnectionProperties() & Connection.PROPERTY_IS_EXTERNAL_CALL) == 0
+                        (c.getConnectionProperties() & Connection.PROPERTY_IS_EXTERNAL_CALL)
+                                == 0
                                 // Include any calls not on same sub as current connection.
                                 && !Objects.equals(c.getPhoneAccountHandle(), incomingHandle))
                 .forEach(c -> {
                     if (c instanceof TelephonyConnection) {
                         TelephonyConnection tc = (TelephonyConnection) c;
                         if (!tc.shouldTreatAsEmergencyCall()) {
-                            Log.i(LOG_TAG, "maybeDisconnectCallsOnOtherSubs: disconnect %s due to "
-                                    + "incoming call on other sub.", tc.getTelecomCallId());
+                            Log.i(LOG_TAG,
+                                    "maybeDisconnectCallsOnOtherSubs: disconnect %s due to "
+                                            + "incoming call on other sub.",
+                                    tc.getTelecomCallId());
                             // Note: intentionally calling hangup instead of onDisconnect.
                             // onDisconnect posts the disconnection to a handle which means that the
                             // disconnection will take place AFTER we answer the incoming call.
