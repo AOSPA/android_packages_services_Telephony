@@ -68,6 +68,8 @@ import com.android.internal.telephony.imsphone.ImsExternalCallTracker;
 import com.android.internal.telephony.imsphone.ImsPhone;
 import com.android.internal.telephony.imsphone.ImsPhoneCallTracker;
 import com.android.internal.telephony.imsphone.ImsPhoneConnection;
+import com.android.internal.telephony.subscription.SubscriptionInfoInternal;
+import com.android.internal.telephony.subscription.SubscriptionManagerService;
 import com.android.phone.FrameworksUtils;
 import com.android.phone.MMIDialogActivity;
 import com.android.phone.PhoneUtils;
@@ -1069,6 +1071,19 @@ public class TelephonyConnectionService extends ConnectionService {
                         return (phone.getState() == PhoneConstants.State.OFFHOOK)
                             || phone.getServiceStateTracker().isRadioOn();
                     } else {
+                        if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
+                            SubscriptionInfoInternal subInfo = SubscriptionManagerService
+                                    .getInstance().getSubscriptionInfoInternal(phone.getSubId());
+                            // Wait until we are in service and ready to make calls. This can happen
+                            // when we power down the radio on bluetooth to save power on watches or
+                            // if it is a test emergency number and we have to wait for the device
+                            // to move IN_SERVICE before the call can take place over normal
+                            // routing.
+                            return (phone.getState() == PhoneConstants.State.OFFHOOK)
+                                    // Do not wait for voice in service on opportunistic SIMs.
+                                    || (subInfo != null && subInfo.isOpportunistic())
+                                    || serviceState == ServiceState.STATE_IN_SERVICE;
+                        }
                         // Wait until we are in service and ready to make calls. This can happen
                         // when we power down the radio on bluetooth to save power on watches or if
                         // it is a test emergency number and we have to wait for the device to move
@@ -1270,9 +1285,16 @@ public class TelephonyConnectionService extends ConnectionService {
             // Notify Telecom of the new Connection type.
             // TODO: Switch out the underlying connection instead of creating a new
             // one and causing UI Jank.
-            boolean noActiveSimCard = SubscriptionController.getInstance()
-                    .getActiveSubInfoCount(phone.getContext().getOpPackageName(),
-                            phone.getContext().getAttributionTag()) == 0;
+            boolean noActiveSimCard;
+            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
+                noActiveSimCard = SubscriptionManagerService.getInstance()
+                        .getActiveSubInfoCount(phone.getContext().getOpPackageName(),
+                                phone.getContext().getAttributionTag()) == 0;
+            } else {
+                noActiveSimCard = SubscriptionController.getInstance()
+                        .getActiveSubInfoCount(phone.getContext().getOpPackageName(),
+                                phone.getContext().getAttributionTag()) == 0;
+            }
             // If there's no active sim card and the device is in emergency mode, use E account.
             addExistingConnection(mPhoneUtilsProxy.makePstnPhoneAccountHandleWithPrefix(
                     phone, "", isEmergencyNumber && noActiveSimCard), repConnection);
@@ -2277,9 +2299,8 @@ public class TelephonyConnectionService extends ConnectionService {
                 throw new CallStateException("Cannot dial as holding in progress");
             }
             if (phone != null) {
-                EmergencyNumber emergencyNumber =
-                        phone.getEmergencyNumberTracker().getEmergencyNumber(number);
-                if (emergencyNumber != null) {
+                boolean isEmergency = mTelephonyManagerProxy.isCurrentEmergencyNumber(number);
+                if (isEmergency) {
                     if (!getAllConnections().isEmpty()) {
                         if (!shouldHoldForEmergencyCall(phone)) {
                             // If we do not support holding ongoing calls for an outgoing
