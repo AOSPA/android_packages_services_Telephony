@@ -1750,6 +1750,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
             extrasToRemove.add(QtiCallConstants.EXTRA_ORIGINAL_CALL_TYPE);
             extrasToRemove.add(QtiCallConstants.EXTRA_IS_PREPARATORY);
             extrasToRemove.add(QtiCallExtras.EXTRAS_CALL_AUDIO_QUALITY);
+            extrasToRemove.add(QtiCallConstants.EXTRA_VIDEO_ONLINE_SERVICE_SUPPORTED);
         }
         if (originalConnection instanceof ImsPhoneConnection) {
             maybeConfigureDeviceToDeviceCommunication();
