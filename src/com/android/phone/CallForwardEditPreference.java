@@ -47,7 +47,7 @@ import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.Phone;
 
 import com.qti.extphone.Client;
-import com.qti.extphone.ExtPhoneCallbackBase;
+import com.qti.extphone.ExtPhoneCallbackListener;
 import com.qti.extphone.ExtTelephonyManager;
 import com.qti.extphone.IExtPhoneCallback;
 import com.qti.extphone.QtiCallForwardInfo;
@@ -471,8 +471,9 @@ public class CallForwardEditPreference extends EditPhoneNumberPreference {
         }
 
         try {
-            mClient = mExtTelephonyManager.registerCallback(
-                    mContext.getPackageName(), mExtPhoneCallFwdInfoCallback);
+            int[] events = new int[] {};
+            mClient = mExtTelephonyManager.registerCallbackWithEvents(
+                    mContext.getPackageName(), mExtPhoneCallbackListener, events);
             mExtTelephonyManager.queryCallForwardStatus(mPhone.getPhoneId(), reason,
                     mServiceClass, null /*number*/, mExpectMore,
                     mClient);
@@ -491,7 +492,7 @@ public class CallForwardEditPreference extends EditPhoneNumberPreference {
         msg.sendToTarget();
     }
 
-    private IExtPhoneCallback mExtPhoneCallFwdInfoCallback = new ExtPhoneCallbackBase() {
+    private ExtPhoneCallbackListener mExtPhoneCallbackListener = new ExtPhoneCallbackListener() {
         @Override
         public void queryCallForwardStatusResponse(Status status, QtiCallForwardInfo[] infos) {
             Message msg = mHandler.obtainMessage(MyHandler.MESSAGE_GET_CF,
