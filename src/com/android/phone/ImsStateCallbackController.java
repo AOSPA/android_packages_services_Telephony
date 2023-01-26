@@ -165,7 +165,9 @@ public class ImsStateCallbackController {
             if (intent == null) {
                 return;
             }
-            if (CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED.equals(intent.getAction())) {
+            if (CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED.equals(intent.getAction()) ||
+                    CarrierConfigManager.ACTION_ESSENTIAL_RECORDS_LOADED.
+                    equals(intent.getAction())) {
                 Bundle bundle = intent.getExtras();
                 if (bundle == null) {
                     return;
@@ -176,12 +178,14 @@ public class ImsStateCallbackController {
                         SubscriptionManager.INVALID_SUBSCRIPTION_ID);
 
                 if (slotId <= SubscriptionManager.INVALID_SIM_SLOT_INDEX) {
-                    loge("onReceive ACTION_CARRIER_CONFIG_CHANGED invalid slotId");
+                    loge("onReceive ACTION_CARRIER_CONFIG_CHANGED/ACTION_ESSENTIAL_RECORDS_LOADED "
+                           + "invalid slotId");
                     return;
                 }
 
                 if (subId <= SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                    loge("onReceive ACTION_CARRIER_CONFIG_CHANGED invalid subId");
+                    loge("onReceive ACTION_CARRIER_CONFIG_CHANGED/ACTION_ESSENTIAL_RECORDS_LOADED "
+                           + "invalid subId");
                     //subscription changed will be notified by mSubChangedListener
                     return;
                 }
@@ -744,8 +748,10 @@ public class ImsStateCallbackController {
         PhoneConfigurationManager.registerForMultiSimConfigChange(mHandler,
                 EVENT_MSIM_CONFIGURATION_CHANGE, null);
 
-        mApp.registerReceiver(mReceiver, new IntentFilter(
-                CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED));
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED);
+        intentFilter.addAction(CarrierConfigManager.ACTION_ESSENTIAL_RECORDS_LOADED);
+        mApp.registerReceiver(mReceiver, intentFilter);
 
         onSubChanged();
     }

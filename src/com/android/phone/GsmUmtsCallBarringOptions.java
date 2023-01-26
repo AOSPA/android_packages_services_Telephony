@@ -87,6 +87,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
     private static final String DIALOG_MESSAGE_KEY = "dialog_message_key";
     private static final String DIALOG_PW_ENTRY_KEY = "dialog_pw_enter_key";
     private static final String KEY_STATUS = "toggle";
+    private static final String KEY_PASSWORD_ENABLED = "password_enabled";
     private static final String PREFERENCE_ENABLED_KEY = "PREFERENCE_ENABLED";
     private static final String SAVED_BEFORE_LOAD_COMPLETED_KEY = "PROGRESS_SHOWING";
 
@@ -103,6 +104,12 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
     private String mOldPassword;
     private String mNewPassword;
     private int mPwChangeDialogStrId;
+    // Holds Carrier config value - config_disable_change_password_over_ims
+    private boolean mConfigDisableChangePwOverIms = false;
+
+    // Determines whether network requires password to be sent with setCallBarring request.
+    // Value comes from getCallBarring response for IMS
+    private boolean mPasswordRequiredOverIms = true;
 
     private static final int PW_CHANGE_OLD = 0;
     private static final int PW_CHANGE_NEW = 1;
@@ -366,7 +373,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
         return password != null && password.length() == PW_LENGTH;
     }
 
-    private boolean canExpectMoreCallFwdReq() {
+    private boolean canExpectMoreCallBarringReq() {
         return (mInitIndex < mPreferences.size()-1);
     }
 
@@ -441,13 +448,12 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
 
         boolean useDisableaAll = true;
         boolean disableOutCallBarringOverIms = false;
-        boolean disableChangePasswordOverIms = false;
 
         ImsPhone imsPhone = mPhone != null ? (ImsPhone) mPhone.getImsPhone() : null;
         if (imsPhone != null && imsPhone.isUtEnabled()) {
             useDisableaAll = false;
             disableOutCallBarringOverIms = isDisableOutCallBarringOverIms();
-            disableChangePasswordOverIms = isDisableChangePasswordOverIms();
+            mConfigDisableChangePwOverIms = isDisableChangePasswordOverIms();
         }
 
         // Find out if the sim card is ready.
@@ -476,7 +482,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
 
         // Change password option is unavailable when sim card is not ready or when the password is
         // not used.
-        if (isSimReady && !disableChangePasswordOverIms) {
+        if (isSimReady && !mConfigDisableChangePwOverIms) {
             mButtonChangePW.setEnabled(true);
         } else {
             mButtonChangePW.setEnabled(false);
@@ -503,7 +509,8 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
             for (CallBarringEditPreference pref : mPreferences) {
                 Bundle bundle = mIcicle.getParcelable(pref.getKey());
                 if (bundle != null) {
-                    pref.handleCallBarringResult(bundle.getBoolean(KEY_STATUS));
+                    pref.handleCallBarringResult(bundle.getBoolean(KEY_STATUS),
+                                bundle.getBoolean(KEY_PASSWORD_ENABLED));
                     pref.init(this, true, mPhone);
                     pref.setEnabled(bundle.getBoolean(PREFERENCE_ENABLED_KEY, pref.isEnabled()));
                 }
@@ -522,7 +529,6 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
     @Override
     public void onResume() {
         super.onResume();
-
         if (mCheckData) {
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(TelephonyIntents.ACTION_ANY_DATA_CONNECTION_STATE_CHANGED);
@@ -555,7 +561,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
                     // and start query from incoming barring
                     mInitIndex = 3;
                 }
-                mPreferences.get(mInitIndex).setExpectMore(canExpectMoreCallFwdReq());
+                mPreferences.get(mInitIndex).setExpectMore(canExpectMoreCallBarringReq());
                 mPreferences.get(mInitIndex).init(this, false, mPhone);
 
                 // Request removing BUSY_SAVING_DIALOG because reading is restarted.
@@ -574,6 +580,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
         for (CallBarringEditPreference pref : mPreferences) {
             Bundle bundle = new Bundle();
             bundle.putBoolean(KEY_STATUS, pref.mIsActivated);
+            bundle.putBoolean(KEY_PASSWORD_ENABLED, pref.isPasswordEnabled());
             bundle.putBoolean(PREFERENCE_ENABLED_KEY, pref.isEnabled());
             outState.putParcelable(pref.getKey(), bundle);
         }
@@ -597,7 +604,7 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
     public void onFinished(Preference preference, boolean reading) {
         if (mInitIndex < mPreferences.size() - 1 && !isFinishing()) {
             mInitIndex++;
-            mPreferences.get(mInitIndex).setExpectMore(canExpectMoreCallFwdReq());
+            mPreferences.get(mInitIndex).setExpectMore(canExpectMoreCallBarringReq());
             mPreferences.get(mInitIndex).init(this, false, mPhone);
         }
         super.onFinished(preference, reading);
@@ -782,6 +789,19 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
                         }
             });
             mBuilder.create().show();
+        }
+    }
+
+    // Since this method will be called once per get_call_barring response, compare with current
+    // enable value to avoid multiple calls to UI framework APIs
+    void setChangePasswordPreference(boolean passwordRequired) {
+        if (!mConfigDisableChangePwOverIms &&
+                        mPasswordRequiredOverIms != passwordRequired) {
+            mPasswordRequiredOverIms = passwordRequired;
+            mButtonChangePW.setEnabled(passwordRequired);
+            if (!passwordRequired) {
+                mButtonChangePW.setSummary(R.string.call_barring_change_pwd_description_disabled);
+            }
         }
     }
 }

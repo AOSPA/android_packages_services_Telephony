@@ -17,6 +17,7 @@
 package com.android.phone;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.telephony.TelephonyManager.HAL_SERVICE_RADIO;
 
 import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_CDMA;
 import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_GSM;
@@ -180,6 +181,7 @@ import com.android.internal.telephony.RIL;
 import com.android.internal.telephony.RILConstants;
 import com.android.internal.telephony.RadioInterfaceCapabilityController;
 import com.android.internal.telephony.ServiceStateTracker;
+import com.android.internal.telephony.SmsApplication;
 import com.android.internal.telephony.SmsController;
 import com.android.internal.telephony.SmsPermissions;
 import com.android.internal.telephony.SubscriptionController;
@@ -204,6 +206,7 @@ import com.android.internal.telephony.uicc.UiccPort;
 import com.android.internal.telephony.uicc.UiccProfile;
 import com.android.internal.telephony.uicc.UiccSlot;
 import com.android.internal.telephony.util.LocaleUtils;
+import com.android.internal.telephony.util.TelephonyUtils;
 import com.android.internal.telephony.util.VoicemailNotificationSettingsUtil;
 import com.android.internal.util.FunctionalUtils;
 import com.android.internal.util.HexDump;
@@ -3221,7 +3224,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                 // Get default phone in this case.
                 phoneId = SubscriptionManager.DEFAULT_PHONE_INDEX;
             }
-            final int subId = mSubscriptionController.getSubIdUsingPhoneId(phoneId);
+            final int subId = mSubscriptionController.getSubId(phoneId);
             Phone phone = PhoneFactory.getPhone(phoneId);
             if (phone == null) return "";
             ServiceStateTracker sst = phone.getServiceStateTracker();
@@ -5975,11 +5978,9 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     public boolean setBoundImsServiceOverride(int slotIndex, boolean isCarrierService,
             int[] featureTypes, String packageName) {
-        int[] subIds = SubscriptionManager.getSubId(slotIndex);
         TelephonyPermissions.enforceShellOnly(Binder.getCallingUid(), "setBoundImsServiceOverride");
         TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
-                (subIds != null ? subIds[0] : SubscriptionManager.INVALID_SUBSCRIPTION_ID),
-                "setBoundImsServiceOverride");
+                SubscriptionManager.getSubscriptionId(slotIndex), "setBoundImsServiceOverride");
 
         final long identity = Binder.clearCallingIdentity();
         try {
@@ -6009,12 +6010,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     @Override
     public boolean clearCarrierImsServiceOverride(int slotIndex) {
-        int[] subIds = SubscriptionManager.getSubId(slotIndex);
         TelephonyPermissions.enforceShellOnly(Binder.getCallingUid(),
                 "clearCarrierImsServiceOverride");
         TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
-                (subIds != null ? subIds[0] : SubscriptionManager.INVALID_SUBSCRIPTION_ID),
-                "clearCarrierImsServiceOverride");
+                SubscriptionManager.getSubscriptionId(slotIndex), "clearCarrierImsServiceOverride");
 
         final long identity = Binder.clearCallingIdentity();
         try {
@@ -6039,11 +6038,9 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     public String getBoundImsServicePackage(int slotId, boolean isCarrierImsService,
             @ImsFeature.FeatureType int featureType) {
-        int[] subIds = SubscriptionManager.getSubId(slotId);
         TelephonyPermissions
-                .enforceCallingOrSelfReadPrivilegedPhoneStatePermissionOrCarrierPrivilege(
-                mApp, (subIds != null ? subIds[0] : SubscriptionManager.INVALID_SUBSCRIPTION_ID),
-                "getBoundImsServicePackage");
+                .enforceCallingOrSelfReadPrivilegedPhoneStatePermissionOrCarrierPrivilege(mApp,
+                        SubscriptionManager.getSubscriptionId(slotId), "getBoundImsServicePackage");
 
         final long identity = Binder.clearCallingIdentity();
         try {
@@ -6660,6 +6657,17 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
             @TelephonyManager.NetworkTypeBitMask long allowedNetworkTypes) {
         TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(
                 mApp, subId, "setAllowedNetworkTypesForReason");
+        // If the caller only has carrier privileges, then they should not be able to override
+        // any network types which were set for security reasons.
+        if (mApp.checkCallingOrSelfPermission(Manifest.permission.MODIFY_PHONE_STATE)
+                != PERMISSION_GRANTED
+                && (reason == TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_ENABLE_2G
+                || reason == TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_USER_RESTRICTIONS)) {
+            throw new SecurityException(
+                    "setAllowedNetworkTypesForReason cannot be called with carrier privileges for"
+                            + " reason "
+                            + reason);
+        }
         if (!TelephonyManager.isValidAllowedNetworkTypesReason(reason)) {
             loge("setAllowedNetworkTypesForReason: Invalid allowed network type reason: " + reason);
             return false;
@@ -8256,6 +8264,16 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     /**
+     * Make sure either called from same process as self (phone) or IPC caller has interact across
+     * users permission.
+     *
+     * @throws SecurityException if the caller does not have the required permission
+     */
+    private void enforceInteractAcrossUsersPermission(String message) {
+        mApp.enforceCallingOrSelfPermission(permission.INTERACT_ACROSS_USERS, message);
+    }
+
+    /**
      * Make sure called from the package in charge of visual voicemail.
      *
      * @throws SecurityException if the caller is not the visual voicemail package.
@@ -9793,12 +9811,22 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
     /**
      * Get the IRadio HAL Version
+     * @deprecated use getHalVersion instead
      */
+    @Deprecated
     @Override
     public int getRadioHalVersion() {
+        return getHalVersion(HAL_SERVICE_RADIO);
+    }
+
+    /**
+     * Get the HAL Version of a specific service
+     */
+    @Override
+    public int getHalVersion(int service) {
         Phone phone = getDefaultPhone();
         if (phone == null) return -1;
-        HalVersion hv = phone.getHalVersion();
+        HalVersion hv = phone.getHalVersion(service);
         if (hv.equals(HalVersion.UNKNOWN)) return -1;
         return hv.major * 100 + hv.minor;
     }
@@ -11528,5 +11556,28 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
     }
 
+    /**
+     * Get the component name of the default app to direct respond-via-message intent for the
+     * user associated with this subscription, update the cache if there is no respond-via-message
+     * application currently configured for this user.
+     * @return component name of the app and class to direct Respond Via Message intent to, or
+     * {@code null} if the functionality is not supported.
+     * @hide
+     */
+    @Override
+    public @Nullable ComponentName getDefaultRespondViaMessageApplication(int subId,
+            boolean updateIfNeeded) {
+        enforceInteractAcrossUsersPermission("getDefaultRespondViaMessageApplication");
 
+        Context context = getPhone(subId).getContext();
+        UserHandle userHandle = null;
+        final long identity = Binder.clearCallingIdentity();
+        try {
+            userHandle = TelephonyUtils.getSubscriptionUserHandle(context, subId);
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+        return SmsApplication.getDefaultRespondViaMessageApplicationAsUser(context,
+                updateIfNeeded, userHandle);
+    }
 }

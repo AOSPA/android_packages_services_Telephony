@@ -20,6 +20,7 @@ import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RES
 import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ALREADY_PURCHASED;
 import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_DISABLED;
 import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ENTITLEMENT_CHECK_FAILED;
+import static android.telephony.TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_NOT_DEFAULT_DATA_SUBSCRIPTION;
 
 import android.annotation.IntDef;
 import android.annotation.NonNull;
@@ -45,6 +46,7 @@ import android.telephony.data.NetworkSliceInfo;
 import android.telephony.data.NetworkSlicingConfig;
 import android.text.TextUtils;
 import android.util.Log;
+import android.webkit.URLUtil;
 import android.webkit.WebView;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -53,6 +55,7 @@ import com.android.internal.telephony.Phone;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -103,6 +106,10 @@ public class SlicePurchaseController extends Handler {
 
     /** Value for an invalid premium capability. */
     public static final int PREMIUM_CAPABILITY_INVALID = -1;
+
+    /** Asset URL for the slice_purchase_test.html file. */
+    public static final String SLICE_PURCHASE_TEST_FILE =
+            "file:///android_asset/slice_purchase_test.html";
 
     /** Purchasing the premium capability is no longer throttled. */
     private static final int EVENT_PURCHASE_UNTHROTTLED = 1;
@@ -157,8 +164,9 @@ public class SlicePurchaseController extends Handler {
     private static final String ACTION_SLICE_PURCHASE_APP_RESPONSE_REQUEST_FAILED =
             "com.android.phone.slice.action.SLICE_PURCHASE_APP_RESPONSE_REQUEST_FAILED";
     /** Action indicating the purchase request was not made on the default data subscription. */
-    private static final String ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUB =
-            "com.android.phone.slice.action.SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUB";
+    private static final String ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUBSCRIPTION =
+            "com.android.phone.slice.action."
+                    + "SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUBSCRIPTION";
     /** Action indicating the purchase request was successful. */
     private static final String ACTION_SLICE_PURCHASE_APP_RESPONSE_SUCCESS =
             "com.android.phone.slice.action.SLICE_PURCHASE_APP_RESPONSE_SUCCESS";
@@ -214,10 +222,10 @@ public class SlicePurchaseController extends Handler {
      * Extra for the not-default data subscription ID PendingIntent that the slice purchase
      * application can send as a response if the premium capability purchase request failed because
      * it was not requested on the default data subscription.
-     * Sends {@link #ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUB}.
+     * Sends {@link #ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUBSCRIPTION}.
      */
-    public static final String EXTRA_INTENT_NOT_DEFAULT_DATA_SUB =
-            "com.android.phone.slice.extra.INTENT_NOT_DEFAULT_DATA_SUB";
+    public static final String EXTRA_INTENT_NOT_DEFAULT_DATA_SUBSCRIPTION =
+            "com.android.phone.slice.extra.INTENT_NOT_DEFAULT_DATA_SUBSCRIPTION";
     /**
      * Extra for the success PendingIntent that the slice purchase application can send as a
      * response if the premium capability purchase request was successful.
@@ -256,7 +264,11 @@ public class SlicePurchaseController extends Handler {
     /** Premium network entitlement query API */
     @NonNull private final PremiumNetworkEntitlementApi mPremiumNetworkEntitlementApi;
 
-    private class SlicePurchaseControllerBroadcastReceiver extends BroadcastReceiver {
+    /**
+     * BroadcastReceiver to receive responses from the slice purchase application.
+     */
+    @VisibleForTesting
+    public class SlicePurchaseControllerBroadcastReceiver extends BroadcastReceiver {
         @TelephonyManager.PremiumCapability private final int mCapability;
 
         SlicePurchaseControllerBroadcastReceiver(
@@ -312,14 +324,13 @@ public class SlicePurchaseController extends Handler {
                             false);
                     break;
                 }
-                case ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUB: {
+                case ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUBSCRIPTION: {
                     logd("Purchase premium capability request was not made on the default data "
                             + "subscription for capability: "
                             + TelephonyManager.convertPremiumCapabilityToString(capability));
                     SlicePurchaseController.getInstance(phoneId)
                             .handlePurchaseResult(capability,
-                            TelephonyManager
-                                    .PURCHASE_PREMIUM_CAPABILITY_RESULT_NOT_DEFAULT_DATA_SUB,
+                            PURCHASE_PREMIUM_CAPABILITY_RESULT_NOT_DEFAULT_DATA_SUBSCRIPTION,
                             false);
                     break;
                 }
@@ -368,6 +379,11 @@ public class SlicePurchaseController extends Handler {
         return sInstances.get(phoneId);
     }
 
+    /**
+     * Create a SlicePurchaseController for the given phone on the given looper.
+     * @param phone The Phone to create the SlicePurchaseController for.
+     * @param looper The Looper to run the SlicePurchaseController on.
+     */
     @VisibleForTesting
     public SlicePurchaseController(@NonNull Phone phone, @NonNull Looper looper) {
         super(looper);
@@ -479,7 +495,7 @@ public class SlicePurchaseController extends Handler {
         }
         if (!isDefaultDataSub()) {
             sendPurchaseResult(capability,
-                    TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_NOT_DEFAULT_DATA_SUB,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_NOT_DEFAULT_DATA_SUBSCRIPTION,
                     onComplete);
             return;
         }
@@ -536,8 +552,11 @@ public class SlicePurchaseController extends Handler {
     private void handlePurchaseResult(
             @TelephonyManager.PremiumCapability int capability,
             @TelephonyManager.PurchasePremiumCapabilityResult int result, boolean throttle) {
-        mPhone.getContext().unregisterReceiver(
-                mSlicePurchaseControllerBroadcastReceivers.remove(capability));
+        SlicePurchaseControllerBroadcastReceiver receiver =
+                mSlicePurchaseControllerBroadcastReceivers.remove(capability);
+        if (receiver != null) {
+            mPhone.getContext().unregisterReceiver(receiver);
+        }
         removeMessages(EVENT_PURCHASE_TIMEOUT, capability);
         if (throttle) {
             throttleCapability(capability, getThrottleDuration(result));
@@ -580,7 +599,7 @@ public class SlicePurchaseController extends Handler {
         PremiumNetworkEntitlementResponse premiumNetworkEntitlementResponse =
                 mPremiumNetworkEntitlementApi.checkEntitlementStatus(capability);
 
-        /* invalid response for entitlement check */
+        // invalid response for entitlement check
         if (premiumNetworkEntitlementResponse == null) {
             logd("Invalid response for entitlement check.");
             handlePurchaseResult(capability,
@@ -629,8 +648,9 @@ public class SlicePurchaseController extends Handler {
                 ACTION_SLICE_PURCHASE_APP_RESPONSE_CARRIER_ERROR, capability, true));
         intent.putExtra(EXTRA_INTENT_REQUEST_FAILED, createPendingIntent(
                 ACTION_SLICE_PURCHASE_APP_RESPONSE_REQUEST_FAILED, capability, false));
-        intent.putExtra(EXTRA_INTENT_NOT_DEFAULT_DATA_SUB, createPendingIntent(
-                ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUB, capability, false));
+        intent.putExtra(EXTRA_INTENT_NOT_DEFAULT_DATA_SUBSCRIPTION, createPendingIntent(
+                ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUBSCRIPTION, capability,
+                false));
         intent.putExtra(EXTRA_INTENT_SUCCESS, createPendingIntent(
                 ACTION_SLICE_PURCHASE_APP_RESPONSE_SUCCESS, capability, true));
         logd("Broadcasting start intent to SlicePurchaseBroadcastReceiver.");
@@ -643,7 +663,7 @@ public class SlicePurchaseController extends Handler {
         filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_CANCELED);
         filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_CARRIER_ERROR);
         filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_REQUEST_FAILED);
-        filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUB);
+        filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUBSCRIPTION);
         filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_SUCCESS);
         mPhone.getContext().registerReceiver(
                 mSlicePurchaseControllerBroadcastReceivers.get(capability), filter);
@@ -658,7 +678,8 @@ public class SlicePurchaseController extends Handler {
      *                {@code false} if it should be immutable.
      * @return The PendingIntent for the given action and capability.
      */
-    @NonNull private PendingIntent createPendingIntent(@NonNull String action,
+    @VisibleForTesting
+    @NonNull public PendingIntent createPendingIntent(@NonNull String action,
             @TelephonyManager.PremiumCapability int capability, boolean mutable) {
         Intent intent = new Intent(action);
         intent.putExtra(EXTRA_PHONE_ID, mPhone.getPhoneId());
@@ -744,14 +765,8 @@ public class SlicePurchaseController extends Handler {
             @TelephonyManager.PremiumCapability int capability) {
         String url = getCarrierConfigs().getString(
                 CarrierConfigManager.KEY_PREMIUM_CAPABILITY_PURCHASE_URL_STRING);
-        if (TextUtils.isEmpty(url)) {
+        if (!isUrlValid(url)) {
             return false;
-        } else {
-            try {
-                new URL(url);
-            } catch (MalformedURLException e) {
-                return false;
-            }
         }
         int[] supportedCapabilities = getCarrierConfigs().getIntArray(
                 CarrierConfigManager.KEY_SUPPORTED_PREMIUM_CAPABILITIES_INT_ARRAY);
@@ -760,6 +775,25 @@ public class SlicePurchaseController extends Handler {
         }
         return Arrays.stream(supportedCapabilities)
                 .anyMatch(supportedCapability -> supportedCapability == capability);
+    }
+
+    private boolean isUrlValid(@Nullable String url) {
+        if (!URLUtil.isValidUrl(url)) {
+            loge("Invalid URL: " + url);
+            return false;
+        }
+        if (URLUtil.isAssetUrl(url) && !url.equals(SLICE_PURCHASE_TEST_FILE)) {
+            loge("Invalid asset: " + url);
+            return false;
+        }
+        try {
+            new URL(url).toURI();
+        } catch (MalformedURLException | URISyntaxException e) {
+            loge("Invalid URI: " + url);
+            return false;
+        }
+        logd("Valid URL: " + url);
+        return true;
     }
 
     private boolean arePremiumCapabilitiesSupportedByDevice() {

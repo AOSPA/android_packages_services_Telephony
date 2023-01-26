@@ -79,6 +79,9 @@ public class CallBarringEditPreference extends EditPinPreference {
 
     private String mFacility;
     boolean mIsActivated = false;
+    // On IMS, network will inform as part of get_call_barring response whether
+    // pasword is required. On CS, password is always required
+    boolean mIsPasswordEnabled = true;
     private boolean mExpectMore;
     private ExtTelephonyManager mExtTelephonyManager;
     private CharSequence mEnableText;
@@ -176,7 +179,6 @@ public class CallBarringEditPreference extends EditPinPreference {
 
     void init(TimeConsumingPreferenceListener listener, boolean skipReading, Phone phone) {
         Log.d(LOG_TAG, "init: phone id = " + phone.getPhoneId());
-
         mPhone = phone;
 
         mTcpListener = listener;
@@ -282,6 +284,16 @@ public class CallBarringEditPreference extends EditPinPreference {
         mExpectMore = expectMore;
     }
 
+    private void setCallBarringInternal(String password) {
+        // Send set call barring message to RIL layer.
+        mPhone.setCallBarring(mFacility, !mIsActivated, password,
+                mHandler.obtainMessage(MyHandler.MESSAGE_SET_CALL_BARRING),
+                getServiceClassForCallBarring(mPhone));
+        if (mTcpListener != null) {
+            mTcpListener.onStarted(this, false);
+        }
+    }
+
     @Override
     public void onClick(DialogInterface dialog, int which) {
         super.onClick(dialog, which);
@@ -290,6 +302,10 @@ public class CallBarringEditPreference extends EditPinPreference {
 
     @Override
     protected void showDialog(Bundle state) {
+        if (!isPasswordEnabled()) {
+            setCallBarringInternal("");
+            return;
+        }
         setDialogMessage(getContext().getString(R.string.messageCallBarring));
         super.showDialog(state);
     }
@@ -364,20 +380,22 @@ public class CallBarringEditPreference extends EditPinPreference {
             }
 
             Log.d(LOG_TAG, "onDialogClosed");
-
-            // Send set call barring message to RIL layer.
-            mPhone.setCallBarring(mFacility, !mIsActivated, password,
-                    mHandler.obtainMessage(MyHandler.MESSAGE_SET_CALL_BARRING),
-                    getServiceClassForCallBarring(mPhone));
-            if (mTcpListener != null) {
-                mTcpListener.onStarted(this, false);
-            }
+            setCallBarringInternal(password);
         }
     }
 
-    void handleCallBarringResult(boolean status) {
+    void handleCallBarringResult(boolean status, boolean password) {
         mIsActivated = status;
-        Log.i(LOG_TAG, "handleCallBarringResult: mIsActivated=" + mIsActivated);
+        mIsPasswordEnabled = password;
+        if (mTcpListener instanceof GsmUmtsCallBarringOptions) {
+            ((GsmUmtsCallBarringOptions)mTcpListener).setChangePasswordPreference(password);
+        }
+        Log.i(LOG_TAG, "handleCallBarringResult: mIsActivated=" + mIsActivated +
+                " mIsPasswordEnabled=" + mIsPasswordEnabled);
+    }
+
+    boolean isPasswordEnabled() {
+        return mIsPasswordEnabled;
     }
 
     private static int getServiceClassForCallBarring(Phone phone) {
@@ -462,7 +480,13 @@ public class CallBarringEditPreference extends EditPinPreference {
                     pref.setEnabled(false);
                     pref.mTcpListener.onError(pref, RESPONSE_ERROR);
                 } else {
-                    pref.handleCallBarringResult(ints[0] != 0);
+                    // The getCallBarring response may be an array of size 1 or 2. ints[0] always
+                    // contains the enabled status of the call barring request
+                    // [0:deactivated, 1:activated]. If size is 2, the value of ints[1] tells
+                    // whether the underlying IMS network requires password to be sent as part
+                    // of setCallBarring requests [0: password not required, 1: password required]
+                    pref.handleCallBarringResult(ints[0] != 0,
+                            ints.length > 1 ? ints[1] != 0 : true);
                     Log.i(LOG_TAG,
                             "handleGetCallBarringResponse: CB state successfully queried: "
                                     + ints[0]);
