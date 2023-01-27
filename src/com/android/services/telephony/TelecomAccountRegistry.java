@@ -129,6 +129,15 @@ public class TelecomAccountRegistry {
     // Flag which decides whether SIM should power down due to APM,
     private static final String APM_SIM_NOT_PWDN_PROPERTY = "persist.vendor.radio.apm_sim_not_pwdn";
 
+    /**
+    * Rtt downgrade supported key to fetch the current status of carrier or the stored cache of
+    * previous sim
+    */
+    private static final String RTT_DOWNGRADE_SUPPORTED =
+            "simless_rtt_downgrade_supported";
+
+    private static final int RTT_DOWNGRADE_NOT_SUPPORTED = 0;
+
     private enum Count {
         ZERO,
         ONE,
@@ -417,6 +426,10 @@ public class TelecomAccountRegistry {
                 mIsRttCapable = true;
             } else {
                 mIsRttCapable = false;
+            }
+
+            if (isRttDowngradeSupported()) {
+                capabilities |= PhoneAccount.CAPABILITY_DOWNGRADE_RTT;
             }
 
             if (mIsCallComposerCapable) {
@@ -983,6 +996,24 @@ public class TelecomAccountRegistry {
         }
 
         /**
+         * Determines whether RTT downgrade is supported given the current state of the
+         * device.
+         */
+        private boolean isRttDowngradeSupported() {
+            /**
+             * We can return the current cached value for both sim and simless case
+             * when the device has sim, cached value will have the current value
+             * for simless case, it will have the previous sub's config value, but in simless only
+             * emergency call is supported, it's assumend this API will be called for emergency
+             * RTT only.
+             */
+            int simLessRttDowngradeSupported = Settings.Secure.getInt(
+                    mContext.getContentResolver(), RTT_DOWNGRADE_SUPPORTED +
+                    convertRttPhoneId(mPhone.getPhoneId()), RTT_DOWNGRADE_NOT_SUPPORTED);
+            return simLessRttDowngradeSupported != RTT_DOWNGRADE_NOT_SUPPORTED;
+        }
+
+        /**
          * Determines whether RTT is supported given the current state of the
          * device.
          */
@@ -1007,8 +1038,8 @@ public class TelecomAccountRegistry {
                 String[] supportedCountries = mContext.getResources().getStringArray(
                         R.array.config_simless_emergency_rtt_supported_countries);
                 if ((supportedCountries == null || Arrays.stream(supportedCountries).noneMatch(
-                        Predicate.isEqual(country))) && !QtiImsUtils.isSimLessRttSupported(
-                        mPhone.getPhoneId(), mPhone.getContext())) {
+                        Predicate.isEqual(country))) && !(QtiImsUtils.isSimLessRttSupported(
+                        mPhone.getPhoneId(), mPhone.getContext()) && isUserRttSettingOn())) {
                     Log.i(this, "isRttCurrentlySupported -- emergency acct and"
                             + " not supported in this country: " + country);
                     return false;
@@ -1496,6 +1527,13 @@ public class TelecomAccountRegistry {
      */
     SubscriptionManager getSubscriptionManager() {
         return mSubscriptionManager;
+    }
+
+    /**
+     * @return List of active subscription list.
+     */
+    public List<SubscriptionInfo> getActiveSubscriptionInfoList() {
+        return mSubscriptionManager.getActiveSubscriptionInfoList();
     }
 
     /**

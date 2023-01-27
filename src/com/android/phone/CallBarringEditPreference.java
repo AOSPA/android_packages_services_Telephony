@@ -61,7 +61,7 @@ import com.android.internal.telephony.PhoneFactory;
 import com.android.phone.settings.fdn.EditPinPreference;
 
 import com.qti.extphone.Client;
-import com.qti.extphone.ExtPhoneCallbackBase;
+import com.qti.extphone.ExtPhoneCallbackListener;
 import com.qti.extphone.ExtTelephonyManager;
 import com.qti.extphone.IExtPhoneCallback;
 import com.qti.extphone.Status;
@@ -255,8 +255,9 @@ public class CallBarringEditPreference extends EditPinPreference {
         }
 
         try {
-            mClient = mExtTelephonyManager.registerCallback(
-                    getContext().getPackageName(), mExtPhoneCallBarringCallback);
+            int[] events = new int[] {};
+            mClient = mExtTelephonyManager.registerCallbackWithEvents(
+                    getContext().getPackageName(), mExtPhoneCallbackListener, events);
             mExtTelephonyManager.getFacilityLockForApp(mPhone.getPhoneId(), mFacility,
                     "" /*password*/, getServiceClassForCallBarring(mPhone), null /*appId*/,
                     mExpectMore, mClient);
@@ -266,7 +267,7 @@ public class CallBarringEditPreference extends EditPinPreference {
         }
     }
 
-    private IExtPhoneCallback mExtPhoneCallBarringCallback = new ExtPhoneCallbackBase() {
+    private ExtPhoneCallbackListener mExtPhoneCallbackListener = new ExtPhoneCallbackListener() {
         @Override
         public void getFacilityLockForAppResponse(Status status, int[] response) {
             Message msg = mHandler.obtainMessage(MyHandler.MESSAGE_GET_CALL_BARRING);
