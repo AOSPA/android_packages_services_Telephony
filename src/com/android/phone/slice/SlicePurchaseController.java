@@ -31,6 +31,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.AsyncResult;
 import android.os.Handler;
@@ -57,6 +58,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -115,8 +119,8 @@ public class SlicePurchaseController extends Handler {
     private static final int EVENT_PURCHASE_UNTHROTTLED = 1;
     /** Slicing config changed. */
     private static final int EVENT_SLICING_CONFIG_CHANGED = 2;
-    /** Display booster notification. */
-    private static final int EVENT_DISPLAY_BOOSTER_NOTIFICATION = 3;
+    /** Start slice purchase application. */
+    private static final int EVENT_START_SLICE_PURCHASE_APP = 3;
     /**
      * Premium capability was not purchased within the timeout specified by
      * {@link CarrierConfigManager#KEY_PREMIUM_CAPABILITY_NOTIFICATION_DISPLAY_TIMEOUT_MILLIS_LONG}.
@@ -170,6 +174,9 @@ public class SlicePurchaseController extends Handler {
     /** Action indicating the purchase request was successful. */
     private static final String ACTION_SLICE_PURCHASE_APP_RESPONSE_SUCCESS =
             "com.android.phone.slice.action.SLICE_PURCHASE_APP_RESPONSE_SUCCESS";
+    /** Action indicating the slice purchase application showed the network boost notification. */
+    private static final String ACTION_SLICE_PURCHASE_APP_RESPONSE_NOTIFICATION_SHOWN =
+            "com.android.phone.slice.action.SLICE_PURCHASE_APP_RESPONSE_NOTIFICATION_SHOWN";
 
     /** Extra for the phone index to send to the slice purchase application. */
     public static final String EXTRA_PHONE_ID = "com.android.phone.slice.extra.PHONE_ID";
@@ -180,6 +187,8 @@ public class SlicePurchaseController extends Handler {
      */
     public static final String EXTRA_PREMIUM_CAPABILITY =
             "com.android.phone.slice.extra.PREMIUM_CAPABILITY";
+    /** Extra for the carrier URL to display to the user to allow premium capability purchase. */
+    public static final String EXTRA_PURCHASE_URL = "com.android.phone.slice.extra.PURCHASE_URL";
     /** Extra for the duration of the purchased premium capability. */
     public static final String EXTRA_PURCHASE_DURATION =
             "com.android.phone.slice.extra.PURCHASE_DURATION";
@@ -235,11 +244,34 @@ public class SlicePurchaseController extends Handler {
      */
     public static final String EXTRA_INTENT_SUCCESS =
             "com.android.phone.slice.extra.INTENT_SUCCESS";
+    /**
+     * Extra for the PendingIntent that the slice purchase application can send to indicate
+     * that it displayed the network boost notification to the user.
+     * Sends {@link #ACTION_SLICE_PURCHASE_APP_RESPONSE_NOTIFICATION_SHOWN}.
+     */
+    public static final String EXTRA_INTENT_NOTIFICATION_SHOWN =
+            "com.android.phone.slice.extra.NOTIFICATION_SHOWN";
 
-    /** Component name to send an explicit broadcast to SlicePurchaseBroadcastReceiver. */
+    /** Component name for the SlicePurchaseBroadcastReceiver. */
     private static final ComponentName SLICE_PURCHASE_APP_COMPONENT_NAME =
             ComponentName.unflattenFromString(
                     "com.android.carrierdefaultapp/.SlicePurchaseBroadcastReceiver");
+
+    /** Shared preference name for network boost notification preferences. */
+    private static final String NETWORK_BOOST_NOTIFICATION_PREFERENCES =
+            "network_boost_notification_preferences";
+    /** Shared preference key for daily count of network boost notifications. */
+    private static final String KEY_DAILY_NOTIFICATION_COUNT = "daily_notification_count";
+    /** Shared preference key for monthly count of network boost notifications. */
+    private static final String KEY_MONTHLY_NOTIFICATION_COUNT = "monthly_notification_count";
+    /**
+     * Shared preference key for the date the daily or monthly counts of network boost notifications
+     * were last reset.
+     * A String with ISO-8601 format {@code YYYY-MM-DD}, from {@link LocalDate#toString}.
+     * For example, if the count was last updated on December 25, 2020, this would be `2020-12-25`.
+     */
+    private static final String KEY_NOTIFICATION_COUNT_LAST_RESET_DATE =
+            "notification_count_last_reset_date";
 
     /** Map of phone ID -> SlicePurchaseController instances. */
     @NonNull private static final Map<Integer, SlicePurchaseController> sInstances =
@@ -261,21 +293,37 @@ public class SlicePurchaseController extends Handler {
             mSlicePurchaseControllerBroadcastReceivers = new HashMap<>();
     /** The current network slicing configuration. */
     @Nullable private NetworkSlicingConfig mSlicingConfig;
-    /** Premium network entitlement query API */
+    /** Premium network entitlement query API. */
     @NonNull private final PremiumNetworkEntitlementApi mPremiumNetworkEntitlementApi;
+    /** LocalDate to use when resetting notification counts. {@code null} except when testing. */
+    @Nullable private LocalDate mLocalDate;
+    /** The number of times the network boost notification has been shown today. */
+    private int mDailyCount;
+    /** The number of times the network boost notification has been shown this month. */
+    private int mMonthlyCount;
 
     /**
      * BroadcastReceiver to receive responses from the slice purchase application.
      */
-    @VisibleForTesting
-    public class SlicePurchaseControllerBroadcastReceiver extends BroadcastReceiver {
+    private class SlicePurchaseControllerBroadcastReceiver extends BroadcastReceiver {
         @TelephonyManager.PremiumCapability private final int mCapability;
 
+        /**
+         * Create a SlicePurchaseControllerBroadcastReceiver for the given capability
+         *
+         * @param capability The requested capability to listen to response for.
+         */
         SlicePurchaseControllerBroadcastReceiver(
                 @TelephonyManager.PremiumCapability int capability) {
             mCapability = capability;
         }
 
+        /**
+         * Process responses from the slice purchase application.
+         *
+         * @param context The Context in which the receiver is running.
+         * @param intent The Intent being received.
+         */
         @Override
         public void onReceive(@NonNull Context context, @NonNull Intent intent) {
             String action = intent.getAction();
@@ -340,6 +388,10 @@ public class SlicePurchaseController extends Handler {
                             capability, duration);
                     break;
                 }
+                case ACTION_SLICE_PURCHASE_APP_RESPONSE_NOTIFICATION_SHOWN: {
+                    SlicePurchaseController.getInstance(phoneId).onNotificationShown();
+                    break;
+                }
                 default:
                     reportAnomaly(UUID_UNKNOWN_ACTION, "SlicePurchaseControllerBroadcastReceiver("
                             + TelephonyManager.convertPremiumCapabilityToString(mCapability)
@@ -381,6 +433,7 @@ public class SlicePurchaseController extends Handler {
 
     /**
      * Create a SlicePurchaseController for the given phone on the given looper.
+     *
      * @param phone The Phone to create the SlicePurchaseController for.
      * @param looper The Looper to run the SlicePurchaseController on.
      */
@@ -390,8 +443,19 @@ public class SlicePurchaseController extends Handler {
         mPhone = phone;
         // TODO: Create a cached value for slicing config in DataIndication and initialize here
         mPhone.mCi.registerForSlicingConfigChanged(this, EVENT_SLICING_CONFIG_CHANGED, null);
-        mPremiumNetworkEntitlementApi = new PremiumNetworkEntitlementApi(mPhone,
-                getCarrierConfigs());
+        mPremiumNetworkEntitlementApi =
+                new PremiumNetworkEntitlementApi(mPhone, getCarrierConfigs());
+        updateNotificationCounts();
+    }
+
+    /**
+     * Set the LocalDate to use for resetting daily and monthly notification counts.
+     *
+     * @param localDate The LocalDate instance to use.
+     */
+    @VisibleForTesting
+    public void setLocalDate(@NonNull LocalDate localDate) {
+        mLocalDate = localDate;
     }
 
     @Override
@@ -412,12 +476,12 @@ public class SlicePurchaseController extends Handler {
                 onSlicingConfigChanged();
                 break;
             }
-            case EVENT_DISPLAY_BOOSTER_NOTIFICATION: {
+            case EVENT_START_SLICE_PURCHASE_APP: {
                 int capability = msg.arg1;
                 String appName = (String) msg.obj;
-                logd("EVENT_DISPLAY_BOOSTER_NOTIFICATION: " + appName + " requests capability "
+                logd("EVENT_START_SLICE_PURCHASE_APP: " + appName + " requests capability "
                         + TelephonyManager.convertPremiumCapabilityToString(capability));
-                onDisplayBoosterNotification(capability, appName);
+                onStartSlicePurchaseApplication(capability, appName);
                 break;
             }
             case EVENT_PURCHASE_TIMEOUT: {
@@ -531,10 +595,10 @@ public class SlicePurchaseController extends Handler {
             return;
         }
 
-        // All state checks passed. Mark purchase pending and display the booster notification to
-        // prompt user purchase. Process through the handler since this method is synchronized.
+        // All state checks passed. Mark purchase pending and start the slice purchase application.
+        // Process through the handler since this method is synchronized.
         mPendingPurchaseCapabilities.put(capability, onComplete);
-        sendMessage(obtainMessage(EVENT_DISPLAY_BOOSTER_NOTIFICATION, capability, 0 /* unused */,
+        sendMessage(obtainMessage(EVENT_START_SLICE_PURCHASE_APP, capability, 0 /* unused */,
                 appName));
     }
 
@@ -594,7 +658,7 @@ public class SlicePurchaseController extends Handler {
         }
     }
 
-    private void onDisplayBoosterNotification(@TelephonyManager.PremiumCapability int capability,
+    private void onStartSlicePurchaseApplication(@TelephonyManager.PremiumCapability int capability,
             @NonNull String appName) {
         PremiumNetworkEntitlementResponse premiumNetworkEntitlementResponse =
                 mPremiumNetworkEntitlementApi.checkEntitlementStatus(capability);
@@ -627,6 +691,24 @@ public class SlicePurchaseController extends Handler {
             return;
         }
 
+        String purchaseUrl = getPurchaseUrl(premiumNetworkEntitlementResponse);
+        if (TextUtils.isEmpty(purchaseUrl)) {
+            handlePurchaseResult(capability,
+                    PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_DISABLED, false);
+            return;
+        }
+
+        updateNotificationCounts();
+        if (mMonthlyCount >= getCarrierConfigs().getInt(
+                CarrierConfigManager.KEY_PREMIUM_CAPABILITY_MAXIMUM_MONTHLY_NOTIFICATION_COUNT_INT)
+                || mDailyCount >= getCarrierConfigs().getInt(
+                CarrierConfigManager.KEY_PREMIUM_CAPABILITY_MAXIMUM_DAILY_NOTIFICATION_COUNT_INT)) {
+            logd("Reached maximum number of network boost notifications.");
+            handlePurchaseResult(capability,
+                    TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_THROTTLED, false);
+            return;
+        }
+
         // Start timeout for purchase completion.
         long timeout = getCarrierConfigs().getLong(CarrierConfigManager
                 .KEY_PREMIUM_CAPABILITY_NOTIFICATION_DISPLAY_TIMEOUT_MILLIS_LONG);
@@ -641,6 +723,7 @@ public class SlicePurchaseController extends Handler {
         intent.putExtra(EXTRA_PHONE_ID, mPhone.getPhoneId());
         intent.putExtra(EXTRA_SUB_ID, mPhone.getSubId());
         intent.putExtra(EXTRA_PREMIUM_CAPABILITY, capability);
+        intent.putExtra(EXTRA_PURCHASE_URL, purchaseUrl);
         intent.putExtra(EXTRA_REQUESTING_APP_NAME, appName);
         intent.putExtra(EXTRA_INTENT_CANCELED, createPendingIntent(
                 ACTION_SLICE_PURCHASE_APP_RESPONSE_CANCELED, capability, false));
@@ -653,6 +736,8 @@ public class SlicePurchaseController extends Handler {
                 false));
         intent.putExtra(EXTRA_INTENT_SUCCESS, createPendingIntent(
                 ACTION_SLICE_PURCHASE_APP_RESPONSE_SUCCESS, capability, true));
+        intent.putExtra(EXTRA_INTENT_NOTIFICATION_SHOWN, createPendingIntent(
+                ACTION_SLICE_PURCHASE_APP_RESPONSE_NOTIFICATION_SHOWN, capability, false));
         logd("Broadcasting start intent to SlicePurchaseBroadcastReceiver.");
         mPhone.getContext().sendBroadcast(intent);
 
@@ -665,8 +750,29 @@ public class SlicePurchaseController extends Handler {
         filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_REQUEST_FAILED);
         filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_NOT_DEFAULT_DATA_SUBSCRIPTION);
         filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_SUCCESS);
+        filter.addAction(ACTION_SLICE_PURCHASE_APP_RESPONSE_NOTIFICATION_SHOWN);
         mPhone.getContext().registerReceiver(
                 mSlicePurchaseControllerBroadcastReceivers.get(capability), filter);
+    }
+
+    /**
+     * Get a valid purchase URL from either entitlement response or carrier configs, if one exists.
+     *
+     * @param entitlementResponse The entitlement response to get the purchase URL from.
+     * @return A valid purchase URL or an empty string if one doesn't exist.
+     */
+    @VisibleForTesting
+    @NonNull public String getPurchaseUrl(
+            @NonNull PremiumNetworkEntitlementResponse entitlementResponse) {
+        String purchaseUrl = entitlementResponse.mServiceFlowURL;
+        if (!isUrlValid(purchaseUrl)) {
+            purchaseUrl = getCarrierConfigs().getString(
+                    CarrierConfigManager.KEY_PREMIUM_CAPABILITY_PURCHASE_URL_STRING);
+            if (!isUrlValid(purchaseUrl)) {
+                purchaseUrl = "";
+            }
+        }
+        return purchaseUrl;
     }
 
     /**
@@ -742,6 +848,73 @@ public class SlicePurchaseController extends Handler {
         }
     }
 
+    private void onNotificationShown() {
+        SharedPreferences sp =
+                mPhone.getContext().getSharedPreferences(NETWORK_BOOST_NOTIFICATION_PREFERENCES, 0);
+        mDailyCount = sp.getInt((KEY_DAILY_NOTIFICATION_COUNT + mPhone.getPhoneId()), 0) + 1;
+        mMonthlyCount = sp.getInt((KEY_MONTHLY_NOTIFICATION_COUNT + mPhone.getPhoneId()), 0) + 1;
+        logd("Network boost notification was shown " + mDailyCount + " times today and "
+                + mMonthlyCount + " times this month.");
+
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putInt((KEY_DAILY_NOTIFICATION_COUNT + mPhone.getPhoneId()), mDailyCount);
+        editor.putInt((KEY_MONTHLY_NOTIFICATION_COUNT + mPhone.getPhoneId()), mMonthlyCount);
+        editor.apply();
+
+        // Don't call updateNotificationCounts here because it will be called whenever a new
+        // purchase request comes in or when SlicePurchaseController is initialized.
+    }
+
+    /**
+     * Update the current daily and monthly network boost notification counts.
+     * If it has been at least a day since the last daily reset or at least a month since the last
+     * monthly reset, reset the current daily or monthly notification counts.
+     */
+    @VisibleForTesting
+    public void updateNotificationCounts() {
+        SharedPreferences sp =
+                mPhone.getContext().getSharedPreferences(NETWORK_BOOST_NOTIFICATION_PREFERENCES, 0);
+        mDailyCount = sp.getInt((KEY_DAILY_NOTIFICATION_COUNT + mPhone.getPhoneId()), 0);
+        mMonthlyCount = sp.getInt((KEY_MONTHLY_NOTIFICATION_COUNT + mPhone.getPhoneId()), 0);
+
+        if (mLocalDate == null) {
+            // Standardize to UTC to prevent default time zone dependency
+            mLocalDate = LocalDate.now(ZoneId.of("UTC"));
+        }
+        LocalDate lastLocalDate = LocalDate.of(1, 1, 1);
+        String lastLocalDateString = sp.getString(
+                (KEY_NOTIFICATION_COUNT_LAST_RESET_DATE + mPhone.getPhoneId()), "");
+        if (!TextUtils.isEmpty(lastLocalDateString)) {
+            try {
+                lastLocalDate = LocalDate.parse(lastLocalDateString);
+            } catch (DateTimeParseException e) {
+                loge("Error parsing LocalDate from SharedPreferences: " + e);
+            }
+        }
+        logd("updateNotificationCounts: mDailyCount=" + mDailyCount + ", mMonthlyCount="
+                + mMonthlyCount + ", mLocalDate=" + mLocalDate + ", lastLocalDate="
+                + lastLocalDate);
+
+        boolean resetMonthly = lastLocalDate.getYear() != mLocalDate.getYear()
+                || lastLocalDate.getMonthValue() != mLocalDate.getMonthValue();
+        boolean resetDaily = resetMonthly
+                || lastLocalDate.getDayOfMonth() != mLocalDate.getDayOfMonth();
+        if (resetDaily) {
+            logd("Resetting daily" + (resetMonthly ? " and monthly" : "") + " notification count.");
+            SharedPreferences.Editor editor = sp.edit();
+            if (resetMonthly) {
+                mMonthlyCount = 0;
+                editor.putInt((KEY_MONTHLY_NOTIFICATION_COUNT + mPhone.getPhoneId()),
+                        mMonthlyCount);
+            }
+            mDailyCount = 0;
+            editor.putInt((KEY_DAILY_NOTIFICATION_COUNT + mPhone.getPhoneId()), mDailyCount);
+            editor.putString((KEY_NOTIFICATION_COUNT_LAST_RESET_DATE + mPhone.getPhoneId()),
+                    mLocalDate.toString());
+            editor.apply();
+        }
+    }
+
     @Nullable private PersistableBundle getCarrierConfigs() {
         return mPhone.getContext().getSystemService(CarrierConfigManager.class)
                 .getConfigForSubId(mPhone.getSubId());
@@ -763,11 +936,6 @@ public class SlicePurchaseController extends Handler {
 
     private boolean isPremiumCapabilitySupportedByCarrier(
             @TelephonyManager.PremiumCapability int capability) {
-        String url = getCarrierConfigs().getString(
-                CarrierConfigManager.KEY_PREMIUM_CAPABILITY_PURCHASE_URL_STRING);
-        if (!isUrlValid(url)) {
-            return false;
-        }
         int[] supportedCapabilities = getCarrierConfigs().getIntArray(
                 CarrierConfigManager.KEY_SUPPORTED_PREMIUM_CAPABILITIES_INT_ARRAY);
         if (supportedCapabilities == null) {
@@ -813,7 +981,6 @@ public class SlicePurchaseController extends Handler {
         }
         int capabilityServiceType = getSliceServiceType(capability);
         for (NetworkSliceInfo sliceInfo : mSlicingConfig.getSliceInfo()) {
-            // TODO: check if TrafficDescriptor has realtime capability slice
             if (sliceInfo.getSliceServiceType() == capabilityServiceType
                     && sliceInfo.getStatus() == NetworkSliceInfo.SLICE_STATUS_ALLOWED) {
                 return true;
@@ -824,7 +991,9 @@ public class SlicePurchaseController extends Handler {
 
     @NetworkSliceInfo.SliceServiceType private int getSliceServiceType(
             @TelephonyManager.PremiumCapability int capability) {
-        // TODO: Implement properly -- potentially need to add new slice service types?
+        if (capability == TelephonyManager.PREMIUM_CAPABILITY_PRIORITIZE_LATENCY) {
+            return NetworkSliceInfo.SLICE_SERVICE_TYPE_URLLC;
+        }
         return NetworkSliceInfo.SLICE_SERVICE_TYPE_NONE;
     }
 
