@@ -50,11 +50,13 @@ import android.telephony.ServiceState;
 import android.telephony.ServiceState.RilRadioTechnology;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.emergency.EmergencyNumber;
 import android.telephony.ims.ImsCallProfile;
 import android.telephony.ims.ImsReasonInfo;
 import android.telephony.ims.ImsStreamMediaProfile;
 import android.telephony.ims.RtpHeaderExtension;
 import android.telephony.ims.RtpHeaderExtensionType;
+import android.telephony.ims.feature.MmTelFeature;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Pair;
@@ -862,6 +864,13 @@ abstract class TelephonyConnection extends Connection implements Holdable,
             Log.i(this, "onReceivedDtmfDigit: digit=%c", digit);
             mDtmfTransport.onDtmfReceived(digit);
         }
+
+        @Override
+        public void onAudioModeIsVoipChanged(int imsAudioHandler) {
+            boolean isVoip = imsAudioHandler == MmTelFeature.AUDIO_HANDLER_ANDROID;
+            Log.i(this, "onAudioModeIsVoipChanged isVoip =" + isVoip);
+            setAudioModeIsVoip(isVoip);
+        }
     };
 
     private TelephonyConnectionService mTelephonyConnectionService;
@@ -990,6 +999,8 @@ abstract class TelephonyConnection extends Connection implements Holdable,
      */
     private final Set<TelephonyConnectionListener> mTelephonyListeners = Collections.newSetFromMap(
             new ConcurrentHashMap<TelephonyConnectionListener, Boolean>(8, 0.9f, 1));
+
+    private Integer mEmergencyServiceCategory = null;
 
     protected TelephonyConnection(com.android.internal.telephony.Connection originalConnection,
             String callId, @android.telecom.Call.Details.CallDirection int callDirection) {
@@ -2338,7 +2349,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
         mPhoneForEvents = null;
     }
 
-    @VisibleForTesting
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PROTECTED)
     public void hangup(int telephonyDisconnectCode) {
         if (mOriginalConnection != null) {
             if (mHangupDisconnectCause != DisconnectCause.NOT_VALID) {
@@ -2368,6 +2379,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                 Log.e(this, e, "Call to Connection.hangup failed with exception");
             }
         } else {
+            mTelephonyConnectionService.onLocalHangup(this);
             if (getState() == STATE_DISCONNECTED) {
                 Log.i(this, "hangup called on an already disconnected call!");
                 close();
@@ -2644,6 +2656,29 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                     setTelephonyConnectionRinging();
                     break;
                 case DISCONNECTED:
+                    if (mTelephonyConnectionService != null) {
+                        ImsReasonInfo reasonInfo = null;
+                        if (isImsConnection()) {
+                            ImsPhoneConnection imsPhoneConnection =
+                                    (ImsPhoneConnection) mOriginalConnection;
+                            reasonInfo = imsPhoneConnection.getImsReasonInfo();
+                            if (reasonInfo != null && reasonInfo.getCode()
+                                    == ImsReasonInfo.CODE_SIP_ALTERNATE_EMERGENCY_CALL) {
+                                EmergencyNumber emergencyNumber =
+                                        imsPhoneConnection.getEmergencyNumberInfo();
+                                if (emergencyNumber != null) {
+                                    mEmergencyServiceCategory =
+                                            emergencyNumber.getEmergencyServiceCategoryBitmask();
+                                }
+                            }
+                        }
+
+                        if (mTelephonyConnectionService.maybeReselectDomain(this,
+                                  mOriginalConnection.getPreciseDisconnectCause(), reasonInfo)) {
+                            break;
+                        }
+                    }
+
                     if (shouldTreatAsEmergencyCall()
                             && (cause
                             == android.telephony.DisconnectCause.EMERGENCY_TEMP_FAILURE
@@ -4072,6 +4107,23 @@ abstract class TelephonyConnection extends Connection implements Holdable,
     @VisibleForTesting
     public List<TelephonyConnectionListener> getTelephonyConnectionListeners() {
         return new ArrayList<>(mTelephonyListeners);
+    }
+
+    /**
+     * @return An {@link Integer} instance of the emergency service category.
+     */
+    public @Nullable Integer getEmergencyServiceCategory() {
+        return mEmergencyServiceCategory;
+    }
+
+    /**
+     * Sets the emergency service category.
+     *
+     * @param eccCategory The emergency service category.
+     */
+    @VisibleForTesting
+    public void setEmergencyServiceCategory(int eccCategory) {
+        mEmergencyServiceCategory = eccCategory;
     }
 
     /* Disables context based swap to make use of new DSDA hold APIs */

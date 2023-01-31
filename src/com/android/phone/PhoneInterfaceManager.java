@@ -17,6 +17,7 @@
 package com.android.phone;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+import static android.telephony.TelephonyManager.HAL_SERVICE_NETWORK;
 import static android.telephony.TelephonyManager.HAL_SERVICE_RADIO;
 
 import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_CDMA;
@@ -83,6 +84,7 @@ import android.telephony.AnomalyReporter;
 import android.telephony.CallForwardingInfo;
 import android.telephony.CarrierConfigManager;
 import android.telephony.CarrierRestrictionRules;
+import android.telephony.CellBroadcastIdRange;
 import android.telephony.CellIdentity;
 import android.telephony.CellIdentityCdma;
 import android.telephony.CellIdentityGsm;
@@ -111,6 +113,7 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyFrameworkInitializer;
 import android.telephony.TelephonyHistogram;
 import android.telephony.TelephonyManager;
+import android.telephony.TelephonyManager.SimState;
 import android.telephony.TelephonyScanManager;
 import android.telephony.ThermalMitigationRequest;
 import android.telephony.UiccCardInfo;
@@ -167,6 +170,7 @@ import com.android.internal.telephony.IIntegerConsumer;
 import com.android.internal.telephony.INumberVerificationCallback;
 import com.android.internal.telephony.ITelephony;
 import com.android.internal.telephony.IccCard;
+import com.android.internal.telephony.IccCardConstants;
 import com.android.internal.telephony.IccLogicalChannelRequest;
 import com.android.internal.telephony.LocaleTracker;
 import com.android.internal.telephony.NetworkScanRequestTracker;
@@ -188,6 +192,7 @@ import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.data.DataUtils;
+import com.android.internal.telephony.domainselection.DomainSelectionResolver;
 import com.android.internal.telephony.emergency.EmergencyNumberTracker;
 import com.android.internal.telephony.euicc.EuiccConnector;
 import com.android.internal.telephony.ims.ImsResolver;
@@ -374,6 +379,9 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private static final int SELECT_P1 = 0x04;
     private static final int SELECT_P2 = 0;
     private static final int SELECT_P3 = 0x10;
+
+    // Toggling null cipher and integrity support was added in IRadioNetwork 2.1
+    private static final int MIN_NULL_CIPHER_AND_INTEGRITY_VERSION = 201;
 
     /** The singleton instance. */
     private static PhoneInterfaceManager sInstance;
@@ -2416,6 +2424,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         publish();
     }
 
+    @VisibleForTesting
+    public SharedPreferences getSharedPreferences() {
+        return mTelephonySharedPreferences;
+    }
+
     private Phone getDefaultPhone() {
         Phone thePhone = getPhone(getDefaultSubscription());
         return (thePhone != null) ? thePhone : PhoneFactory.getDefaultPhone();
@@ -3459,6 +3472,26 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     @Override
+    public String getPrimaryImei(String callingPackage, String callingFeatureId) {
+        enforceCallingPackage(callingPackage, Binder.getCallingUid(), "getPrimaryImei");
+        if (!checkCallingOrSelfReadDeviceIdentifiersForAnySub(mApp, callingPackage,
+                callingFeatureId, "getPrimaryImei")) {
+            throw new SecurityException("Caller does not have permission");
+        }
+        final long identity = Binder.clearCallingIdentity();
+        try {
+            for (Phone phone : PhoneFactory.getPhones()) {
+                if (phone.getImeiType() == Phone.IMEI_TYPE_PRIMARY) {
+                    return phone.getImei();
+                }
+            }
+            throw new UnsupportedOperationException("Operation not supported");
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
+    @Override
     public String getTypeAllocationCodeForSlot(int slotIndex) {
         Phone phone = PhoneFactory.getPhone(slotIndex);
         String tac = null;
@@ -3632,8 +3665,19 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      *
      * @throws SecurityException if the caller does not have the required permission
      */
-    private void enforceModifyPermission() {
+    @VisibleForTesting
+    public void enforceModifyPermission() {
         mApp.enforceCallingOrSelfPermission(android.Manifest.permission.MODIFY_PHONE_STATE, null);
+    }
+
+    /**
+     * Make sure the caller has the MODIFY_PHONE_STATE permission.
+     *
+     * @throws SecurityException if the caller does not have the required permission
+     */
+    @VisibleForTesting
+    public void enforceReadPermission() {
+        mApp.enforceCallingOrSelfPermission(android.Manifest.permission.READ_PHONE_STATE, null);
     }
 
     private void enforceActiveEmergencySessionPermission() {
@@ -11273,9 +11317,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
 
         for (SignalThresholdInfo info : request.getSignalThresholdInfos()) {
-            // Only system caller can set mHysteresisMs/mHysteresisDb/mIsEnabled.
+            // Only system caller can set mHysteresisMs/mIsEnabled.
             if (info.getHysteresisMs() != SignalThresholdInfo.HYSTERESIS_MS_DISABLED
-                    || info.getHysteresisDb() != SignalThresholdInfo.HYSTERESIS_DB_DISABLED
                     || info.isEnabled()) {
                 throw new IllegalArgumentException(
                         "Only system can set hide fields in SignalThresholdInfo");
@@ -11663,5 +11706,178 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
         return SmsApplication.getDefaultRespondViaMessageApplicationAsUser(context,
                 updateIfNeeded, userHandle);
+    }
+
+    /**
+     * Set whether the device is able to connect with null ciphering or integrity
+     * algorithms. This is a global setting and will apply to all active subscriptions
+     * and all new subscriptions after this.
+     *
+     * @param enabled when true, null  cipher and integrity algorithms are allowed.
+     * @hide
+     */
+    @Override
+    @RequiresPermission(android.Manifest.permission.MODIFY_PHONE_STATE)
+    public void setNullCipherAndIntegrityEnabled(boolean enabled) {
+        enforceModifyPermission();
+        checkForNullCipherAndIntegritySupport();
+
+        // Persist the state of our preference. Each GsmCdmaPhone instance is responsible
+        // for listening to these preference changes and applying them immediately.
+        SharedPreferences.Editor editor = mTelephonySharedPreferences.edit();
+        editor.putBoolean(Phone.PREF_NULL_CIPHER_AND_INTEGRITY_ENABLED, enabled);
+        editor.apply();
+
+        for (Phone phone: PhoneFactory.getPhones()) {
+            phone.handleNullCipherEnabledChange();
+        }
+    }
+
+
+    /**
+     * Get whether the device is able to connect with null ciphering or integrity
+     * algorithms. Note that this retrieves the phone-global preference and not
+     * the state of the radio.
+     *
+     * @throws SecurityException if {@link permission#MODIFY_PHONE_STATE} is not satisfied
+     * @throws UnsupportedOperationException if the device does not support the minimum HAL
+     * version for this feature.
+     * @hide
+     */
+    @Override
+    @RequiresPermission(android.Manifest.permission.READ_PHONE_STATE)
+    public boolean isNullCipherAndIntegrityPreferenceEnabled() {
+        enforceReadPermission();
+        checkForNullCipherAndIntegritySupport();
+        return getDefaultPhone().getNullCipherAndIntegrityEnabledPreference();
+    }
+
+    private void checkForNullCipherAndIntegritySupport() {
+        if (getHalVersion(HAL_SERVICE_NETWORK) < MIN_NULL_CIPHER_AND_INTEGRITY_VERSION) {
+            throw new UnsupportedOperationException(
+                    "Null cipher and integrity operations require HAL 2.1 or above");
+        }
+    }
+
+    /**
+     * Get the SIM state for the slot index.
+     * For Remote-SIMs, this method returns {@link IccCardConstants.State#UNKNOWN}
+     *
+     * @return SIM state as the ordinal of {@link IccCardConstants.State}
+     */
+    @Override
+    @SimState
+    public int getSimStateForSlotIndex(int slotIndex) {
+        IccCardConstants.State simState;
+        if (slotIndex < 0) {
+            simState = IccCardConstants.State.UNKNOWN;
+        } else {
+            Phone phone = null;
+            try {
+                phone = PhoneFactory.getPhone(slotIndex);
+            } catch (IllegalStateException e) {
+                // ignore
+            }
+            if (phone == null) {
+                simState = IccCardConstants.State.UNKNOWN;
+            } else {
+                IccCard icc = phone.getIccCard();
+                if (icc == null) {
+                    simState = IccCardConstants.State.UNKNOWN;
+                } else {
+                    simState = icc.getState();
+                }
+            }
+        }
+        return simState.ordinal();
+    }
+
+    /**
+     * Get current cell broadcast ranges.
+     */
+    @Override
+    @RequiresPermission(android.Manifest.permission.MODIFY_CELL_BROADCASTS)
+    public List<CellBroadcastIdRange> getCellBroadcastIdRanges(int subId) {
+        mApp.enforceCallingPermission(android.Manifest.permission.MODIFY_CELL_BROADCASTS,
+                "getCellBroadcastIdRanges");
+        final long identity = Binder.clearCallingIdentity();
+        try {
+            return getPhone(subId).getCellBroadcastIdRanges();
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
+    /**
+     * Set reception of cell broadcast messages with the list of the given ranges
+     *
+     * @param ranges the list of {@link CellBroadcastIdRange} to be enabled
+     */
+    @Override
+    @RequiresPermission(android.Manifest.permission.MODIFY_CELL_BROADCASTS)
+    public void setCellBroadcastIdRanges(int subId, @NonNull List<CellBroadcastIdRange> ranges,
+            @Nullable IIntegerConsumer callback) {
+        mApp.enforceCallingPermission(android.Manifest.permission.MODIFY_CELL_BROADCASTS,
+                "setCellBroadcastIdRanges");
+        final long identity = Binder.clearCallingIdentity();
+        try {
+            Phone phone = getPhoneFromSubId(subId);
+            if (DBG) {
+                log("setCellBroadcastIdRanges for subId :" + subId + ", phone:" + phone);
+            }
+            phone.setCellBroadcastIdRanges(ranges, result -> {
+                if (callback != null) {
+                    try {
+                        callback.accept(result);
+                    } catch (RemoteException e) {
+                        Log.w(LOG_TAG, "setCellBroadcastIdRanges: callback not available.");
+                    }
+                }
+            });
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
+    /**
+     * Returns whether the device supports the domain selection service.
+     *
+     * @return {@code true} if the device supports the domain selection service.
+     */
+    @Override
+    public boolean isDomainSelectionSupported() {
+        mApp.enforceCallingOrSelfPermission(Manifest.permission.READ_PRIVILEGED_PHONE_STATE,
+                "isDomainSelectionSupported");
+
+        final long identity = Binder.clearCallingIdentity();
+        try {
+            return DomainSelectionResolver.getInstance().isDomainSelectionSupported();
+        }  finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
+    /**
+     * Check whether the caller (or self, if not processing an IPC) can read device identifiers.
+     *
+     * <p>This method behaves in one of the following ways:
+     * <ul>
+     *     <li>return true : if the calling package has the appop permission {@link
+     *     Manifest.permission#USE_ICC_AUTH_WITH_DEVICE_IDENTIFIER} in the manifest </>
+     *     <li>return true : if any one subscription has the READ_PRIVILEGED_PHONE_STATE
+     *     permission, the calling package passes a DevicePolicyManager Device Owner / Profile
+     *     Owner device identifier access check, or the calling package has carrier privileges</>
+     *     <li>throw SecurityException: if the caller does not meet any of the requirements.
+     * </ul>
+     */
+    private static boolean checkCallingOrSelfReadDeviceIdentifiersForAnySub(Context context,
+            String callingPackage, @Nullable String callingFeatureId, String message) {
+        for (Phone phone : PhoneFactory.getPhones()) {
+            if (TelephonyPermissions.checkCallingOrSelfReadDeviceIdentifiers(context,
+                    phone.getSubId(), callingPackage, callingFeatureId, message)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
