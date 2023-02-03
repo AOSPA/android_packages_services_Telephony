@@ -1749,6 +1749,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
             extrasToRemove.add(QtiCallConstants.EXTRA_CRS_TYPE);
             extrasToRemove.add(QtiCallConstants.EXTRA_ORIGINAL_CALL_TYPE);
             extrasToRemove.add(QtiCallConstants.EXTRA_IS_PREPARATORY);
+            extrasToRemove.add(QtiCallConstants.EXTRAS_SRTP_ENCRYPTION_CATEGORY);
             extrasToRemove.add(QtiCallExtras.EXTRAS_CALL_AUDIO_QUALITY);
             extrasToRemove.add(QtiCallConstants.EXTRA_VIDEO_ONLINE_SERVICE_SUPPORTED);
         }
