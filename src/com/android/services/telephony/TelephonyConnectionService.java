@@ -611,6 +611,7 @@ public class TelephonyConnectionService extends ConnectionService {
                             c.removeTelephonyConnectionListener(mNormalCallConnectionListener);
                             mDomainSelectionConnection.finishSelection();
                             mDomainSelectionConnection = null;
+                            mNormalCallConnection = null;
                         }
                     }
                 }
@@ -637,33 +638,41 @@ public class TelephonyConnectionService extends ConnectionService {
             new DomainSelectionConnection.DomainSelectionConnectionCallback() {
                 @Override
                 public void onSelectionTerminated(@DisconnectCauses int cause) {
-                    Log.v(this, "Call domain selection terminated.");
-                    if (mDomainSelectionConnection != null) {
-                        mDomainSelectionConnection = null;
-                    }
+                    mDomainSelectionMainExecutor.execute(new Runnable() {
+                        int mCause = cause;
+                        @Override
+                        public void run() {
+                            Log.v(this, "Call domain selection terminated.");
+                            if (mDomainSelectionConnection != null) {
+                                mDomainSelectionConnection = null;
+                            }
 
-                    if (mNormalCallConnection != null) {
-                        // TODO: To support ShowPreciseFailedCause,
-                        //  TelephonyConnection.getShowPreciseFailedCause API should be added.
+                            if (mNormalCallConnection != null) {
+                                // TODO: To support ShowPreciseFailedCause, TelephonyConnection
+                                //  .getShowPreciseFailedCause API should be added.
 
-                        // If cause is NOT_VALID then, it's a redial cancellation and use cause
-                        // code from original connection.
-                        com.android.internal.telephony.Connection connection =
-                                mNormalCallConnection.getOriginalConnection();
-                        if (cause == android.telephony.DisconnectCause.NOT_VALID) {
-                            cause = connection.getDisconnectCause();
+                                // If cause is NOT_VALID then, it's a redial cancellation and
+                                // use cause code from original connection.
+                                com.android.internal.telephony.Connection connection =
+                                        mNormalCallConnection.getOriginalConnection();
+                                if (connection != null) {
+                                    if (mCause == android.telephony.DisconnectCause.NOT_VALID) {
+                                        mCause = connection.getDisconnectCause();
+                                    }
+
+                                    String reason = connection.getVendorDisconnectCause();
+                                    int phoneId = mNormalCallConnection.getPhone().getPhoneId();
+                                    mNormalCallConnection.setTelephonyConnectionDisconnected(
+                                            mDisconnectCauseFactory.toTelecomDisconnectCause(
+                                                    mCause, reason, phoneId));
+                                    Log.d(this, "Call connection closed. Cause: " + mCause
+                                            + " Reason: " + reason);
+                                }
+                                mNormalCallConnection.close();
+                                mNormalCallConnection = null;
+                            }
                         }
-
-                        String reason = connection.getVendorDisconnectCause();
-                        mNormalCallConnection.setTelephonyConnectionDisconnected(
-                                mDisconnectCauseFactory.toTelecomDisconnectCause(cause, reason));
-
-                        mNormalCallConnection.close();
-                        mNormalCallConnection = null;
-                        Log.d(this, "Call connection closed. Cause: " + cause
-                                + " Reason: " + reason);
-                    }
-
+                    });
                 }
             };
 

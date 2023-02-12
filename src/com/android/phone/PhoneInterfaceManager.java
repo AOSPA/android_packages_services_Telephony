@@ -394,7 +394,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private AppOpsManager mAppOps;
     private PackageManager mPm;
     private MainThreadHandler mMainThreadHandler;
-    private SubscriptionController mSubscriptionController;
+    private final SubscriptionController mSubscriptionController;
     private SharedPreferences mTelephonySharedPreferences;
     private PhoneConfigurationManager mPhoneConfigurationManager;
     private final RadioInterfaceCapabilityController mRadioInterfaceCapabilities;
@@ -435,6 +435,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
             "reset_network_erase_modem_config_enabled";
 
     private static final int SET_NETWORK_SELECTION_MODE_AUTOMATIC_TIMEOUT_MS = 2000; // 2 seconds
+
+    private static final int MODEM_ACTIVITY_TIME_OFFSET_CORRECTION_MS = 50;
 
     /**
      * With support for MEP(multiple enabled profile) in Android T, a SIM card can have more than
@@ -1467,6 +1469,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                         ModemActivityInfo info = (ModemActivityInfo) ar.result;
                         if (isModemActivityInfoValid(info)) {
                             mergeModemActivityInfo(info);
+                        } else {
+                            loge("queryModemActivityInfo: invalid response");
                         }
                         // This is needed to decouple ret from mLastModemActivityInfo
                         // We don't want to return mLastModemActivityInfo which is updated
@@ -2410,7 +2414,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         mAppOps = (AppOpsManager)app.getSystemService(Context.APP_OPS_SERVICE);
         mPm = app.getSystemService(PackageManager.class);
         mMainThreadHandler = new MainThreadHandler();
-        mSubscriptionController = SubscriptionController.getInstance();
+        if (!PhoneFactory.isSubscriptionManagerServiceEnabled()) {
+            mSubscriptionController = SubscriptionController.getInstance();
+        } else {
+            mSubscriptionController = null;
+        }
         mTelephonySharedPreferences =
                 PreferenceManager.getDefaultSharedPreferences(mApp);
         mNetworkScanRequestTracker = new NetworkScanRequestTracker();
@@ -2429,7 +2437,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         return mTelephonySharedPreferences;
     }
 
-    private Phone getDefaultPhone() {
+    /**
+     * Get the default phone for this device.
+     */
+    @VisibleForTesting
+    public Phone getDefaultPhone() {
         Phone thePhone = getPhone(getDefaultSubscription());
         return (thePhone != null) ? thePhone : PhoneFactory.getDefaultPhone();
     }
@@ -6730,11 +6742,15 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
             return false;
         }
 
-        log("setAllowedNetworkTypesForReason: " + reason + " value: "
+        log("setAllowedNetworkTypesForReason: subId=" + subId + ", reason=" + reason + " value: "
                 + TelephonyManager.convertNetworkTypeBitmaskToString(allowedNetworkTypes));
 
+        Phone phone = getPhone(subId);
+        if (phone == null) {
+            return false;
+        }
 
-        if (allowedNetworkTypes == getPhoneFromSubId(subId).getAllowedNetworkTypes(reason)) {
+        if (allowedNetworkTypes == phone.getAllowedNetworkTypes(reason)) {
             log("setAllowedNetworkTypesForReason: " + reason + "does not change value");
             return true;
         }
@@ -8025,7 +8041,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
     }
 
-    // Checks that ModemActivityInfo is valid. Sleep time, Idle time, Rx time and Tx time should be
+    // Checks that ModemActivityInfo is valid. Sleep time and Idle time should be
     // less than total activity duration.
     private boolean isModemActivityInfoValid(ModemActivityInfo info) {
         if (info == null) {
@@ -8033,13 +8049,13 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
         int activityDurationMs =
                 (int) (info.getTimestampMillis() - mLastModemActivityInfo.getTimestampMillis());
+        activityDurationMs += MODEM_ACTIVITY_TIME_OFFSET_CORRECTION_MS;
+
         int totalTxTimeMs = Arrays.stream(info.getTransmitTimeMillis()).sum();
 
         return (info.isValid()
             && (info.getSleepTimeMillis() <= activityDurationMs)
-            && (info.getIdleTimeMillis() <= activityDurationMs)
-            && (info.getReceiveTimeMillis() <= activityDurationMs)
-            && (totalTxTimeMs <= activityDurationMs));
+            && (info.getIdleTimeMillis() <= activityDurationMs));
     }
 
     private void updateLastModemActivityInfo(ModemActivityInfo info, int rat, int freq) {
@@ -11756,6 +11772,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         if (getHalVersion(HAL_SERVICE_NETWORK) < MIN_NULL_CIPHER_AND_INTEGRITY_VERSION) {
             throw new UnsupportedOperationException(
                     "Null cipher and integrity operations require HAL 2.1 or above");
+        }
+        if (!getDefaultPhone().isNullCipherAndIntegritySupported()) {
+            throw new UnsupportedOperationException(
+                    "Null cipher and integrity operations unsupported by modem");
         }
     }
 
