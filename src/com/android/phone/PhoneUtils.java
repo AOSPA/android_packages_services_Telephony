@@ -46,6 +46,7 @@ import android.telecom.VideoProfile;
 import android.telephony.CarrierConfigManager;
 import android.telephony.ims.ImsReasonInfo;
 import android.telephony.PhoneNumberUtils;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -69,6 +70,7 @@ import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.TelephonyCapabilities;
 import com.android.phone.settings.SuppServicesUiUtil;
+import com.android.services.telephony.TelecomAccountRegistry;
 import com.android.telephony.Rlog;
 
 import com.qti.extphone.ExtTelephonyManager;
@@ -765,7 +767,11 @@ public class PhoneUtils {
             Phone phone, String prefix, boolean isEmergency, UserHandle userHandle) {
         // TODO: Should use some sort of special hidden flag to decorate this account as
         // an emergency-only account
-        String id = isEmergency ? EMERGENCY_ACCOUNT_HANDLE_ID : prefix +
+
+        List<SubscriptionInfo> subList =
+                TelecomAccountRegistry.getInstance(null).getActiveSubscriptionInfoList();
+        boolean isEmergencyOnlyAccount = subList != null && subList.size() == 0;
+        String id = (isEmergency || isEmergencyOnlyAccount) ? EMERGENCY_ACCOUNT_HANDLE_ID : prefix +
                 String.valueOf((phone != null) ? phone.getSubId() : null);
         return makePstnPhoneAccountHandleWithPrefix(id, prefix, isEmergency, userHandle);
     }

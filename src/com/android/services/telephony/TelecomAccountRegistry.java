@@ -70,6 +70,7 @@ import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.RIL;
 import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.util.QtiImsUtils;
+import com.android.internal.telephony.subscription.SubscriptionManagerService;
 import com.android.phone.PhoneGlobals;
 import com.android.phone.PhoneUtils;
 import com.android.phone.R;
@@ -127,6 +128,15 @@ public class TelecomAccountRegistry {
 
     // Flag which decides whether SIM should power down due to APM,
     private static final String APM_SIM_NOT_PWDN_PROPERTY = "persist.vendor.radio.apm_sim_not_pwdn";
+
+    /**
+    * Rtt downgrade supported key to fetch the current status of carrier or the stored cache of
+    * previous sim
+    */
+    private static final String RTT_DOWNGRADE_SUPPORTED =
+            "simless_rtt_downgrade_supported";
+
+    private static final int RTT_DOWNGRADE_NOT_SUPPORTED = 0;
 
     private enum Count {
         ZERO,
@@ -418,6 +428,10 @@ public class TelecomAccountRegistry {
                 mIsRttCapable = false;
             }
 
+            if (isRttDowngradeSupported()) {
+                capabilities |= PhoneAccount.CAPABILITY_DOWNGRADE_RTT;
+            }
+
             if (mIsCallComposerCapable) {
                 capabilities |= PhoneAccount.CAPABILITY_CALL_COMPOSER;
             }
@@ -580,18 +594,37 @@ public class TelecomAccountRegistry {
                 return false;
             }
 
-            SubscriptionController controller = SubscriptionController.getInstance();
-            if (controller == null) {
-                Log.d(this, "isEmergencyPreferredAccount: SubscriptionController not available.");
-                return false;
-            }
-            // Only set an emergency preference on devices with multiple active subscriptions
-            // (include opportunistic subscriptions) in this check.
-            // API says never null, but this can return null in testing.
-            int[] activeSubIds = controller.getActiveSubIdList(false);
-            if (activeSubIds == null || activeSubIds.length <= 1) {
-                Log.d(this, "isEmergencyPreferredAccount: one or less active subscriptions.");
-                return false;
+            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
+                if (SubscriptionManagerService.getInstance() == null) {
+                    Log.d(this,
+                            "isEmergencyPreferredAccount: SubscriptionManagerService not "
+                                    + "available.");
+                    return false;
+                }
+                // Only set an emergency preference on devices with multiple active subscriptions
+                // (include opportunistic subscriptions) in this check.
+                // API says never null, but this can return null in testing.
+                int[] activeSubIds = SubscriptionManagerService.getInstance()
+                        .getActiveSubIdList(false);
+                if (activeSubIds == null || activeSubIds.length <= 1) {
+                    Log.d(this, "isEmergencyPreferredAccount: one or less active subscriptions.");
+                    return false;
+                }
+            } else {
+                SubscriptionController controller = SubscriptionController.getInstance();
+                if (controller == null) {
+                    Log.d(this,
+                            "isEmergencyPreferredAccount: SubscriptionController not available.");
+                    return false;
+                }
+                // Only set an emergency preference on devices with multiple active subscriptions
+                // (include opportunistic subscriptions) in this check.
+                // API says never null, but this can return null in testing.
+                int[] activeSubIds = controller.getActiveSubIdList(false);
+                if (activeSubIds == null || activeSubIds.length <= 1) {
+                    Log.d(this, "isEmergencyPreferredAccount: one or less active subscriptions.");
+                    return false;
+                }
             }
             // Check to see if this PhoneAccount is associated with the default Data subscription.
             if (!SubscriptionManager.isValidSubscriptionId(subId)) {
@@ -599,10 +632,21 @@ public class TelecomAccountRegistry {
                         + "valid.");
                 return false;
             }
-            int userDefaultData = controller.getDefaultDataSubId();
+            int userDefaultData = SubscriptionManager.getDefaultDataSubscriptionId();
             boolean isActiveDataValid = SubscriptionManager.isValidSubscriptionId(activeDataSubId);
-            boolean isActiveDataOpportunistic = isActiveDataValid
-                    && controller.isOpportunistic(activeDataSubId);
+
+            boolean isActiveDataOpportunistic;
+            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
+                SubscriptionInfo subInfo;
+                subInfo = SubscriptionManagerService.getInstance()
+                        .getSubscriptionInfo(activeDataSubId);
+                isActiveDataOpportunistic = isActiveDataValid && subInfo != null
+                        && subInfo.isOpportunistic();
+            } else {
+                isActiveDataOpportunistic = isActiveDataValid
+                        && SubscriptionController.getInstance().isOpportunistic(activeDataSubId);
+            }
+
             // compare the activeDataSubId to the subId specified only if it is valid and not an
             // opportunistic subscription (only supports data). If not, use the current default
             // defined by the user.
@@ -952,6 +996,24 @@ public class TelecomAccountRegistry {
         }
 
         /**
+         * Determines whether RTT downgrade is supported given the current state of the
+         * device.
+         */
+        private boolean isRttDowngradeSupported() {
+            /**
+             * We can return the current cached value for both sim and simless case
+             * when the device has sim, cached value will have the current value
+             * for simless case, it will have the previous sub's config value, but in simless only
+             * emergency call is supported, it's assumend this API will be called for emergency
+             * RTT only.
+             */
+            int simLessRttDowngradeSupported = Settings.Secure.getInt(
+                    mContext.getContentResolver(), RTT_DOWNGRADE_SUPPORTED +
+                    convertRttPhoneId(mPhone.getPhoneId()), RTT_DOWNGRADE_NOT_SUPPORTED);
+            return simLessRttDowngradeSupported != RTT_DOWNGRADE_NOT_SUPPORTED;
+        }
+
+        /**
          * Determines whether RTT is supported given the current state of the
          * device.
          */
@@ -976,8 +1038,8 @@ public class TelecomAccountRegistry {
                 String[] supportedCountries = mContext.getResources().getStringArray(
                         R.array.config_simless_emergency_rtt_supported_countries);
                 if ((supportedCountries == null || Arrays.stream(supportedCountries).noneMatch(
-                        Predicate.isEqual(country))) && !QtiImsUtils.isSimLessRttSupported(
-                        mPhone.getPhoneId(), mPhone.getContext())) {
+                        Predicate.isEqual(country))) && !(QtiImsUtils.isSimLessRttSupported(
+                        mPhone.getPhoneId(), mPhone.getContext()) && isUserRttSettingOn())) {
                     Log.i(this, "isRttCurrentlySupported -- emergency acct and"
                             + " not supported in this country: " + country);
                     return false;
@@ -1465,6 +1527,13 @@ public class TelecomAccountRegistry {
      */
     SubscriptionManager getSubscriptionManager() {
         return mSubscriptionManager;
+    }
+
+    /**
+     * @return List of active subscription list.
+     */
+    public List<SubscriptionInfo> getActiveSubscriptionInfoList() {
+        return mSubscriptionManager.getActiveSubscriptionInfoList();
     }
 
     /**
