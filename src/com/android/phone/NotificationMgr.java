@@ -1083,7 +1083,8 @@ public class NotificationMgr {
         mSelectedNetworkOperatorName.remove(subId);
     }
 
-    private static long getTimeStamp() {
+    @VisibleForTesting
+    public long getTimeStamp() {
         return SystemClock.elapsedRealtime();
     }
 }

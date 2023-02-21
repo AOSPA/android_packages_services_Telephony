@@ -2277,6 +2277,11 @@
      notificatios -->
     <string name="notification_channel_sip_account">Deprecated SIP accounts</string>
 
+    <string name="send_from_work_profile_title">Can\'t send message from this profile</string>
+    <string name="send_from_work_profile_description">Your work policy allows you to send message only from the work profile</string>
+    <string name="send_from_work_profile_cancel">Cancel</string>
+    <string name="send_from_work_profile_action_str">Switch to work profile</string>
+
     <string name="labelCommonMore">Call settings</string>
     <string name="labelCommonMore_with_label">Call settings (<xliff:g id="subscriptionlabel" example="T-Mobile">%s</xliff:g>)</string>
     <string name="sum_common_call_settings">Additional call settings</string>
@@ -2288,4 +2293,5 @@
     <string name="c_iwlan_exit_notification_positive_button">OPEN SETTINGS</string>
     <string name="c_iwlan_exit_notification_negative_button">DISMISS</string>
     <string name="c_iwlan_channel_name">C_IWLAN</string>
+
 </resources>

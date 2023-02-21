@@ -2683,6 +2683,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
 
                         if (mTelephonyConnectionService.maybeReselectDomain(this,
                                   mOriginalConnection.getPreciseDisconnectCause(), reasonInfo)) {
+                            clearOriginalConnection();
                             break;
                         }
                     }

@@ -317,6 +317,8 @@ public class TelecomAccountRegistry {
 
         private PhoneAccount registerPstnPhoneAccount(boolean isEmergency, boolean isTestAccount) {
             PhoneAccount account = buildPstnPhoneAccount(mIsEmergency, mIsTestAccount);
+            Log.i(this, "registerPstnPhoneAccount: Registering account=%s with "
+                    + "Telecom. subId=%d", account, getSubId());
             // Register with Telecom and put into the account entry.
             mTelecomManager.registerPhoneAccount(account);
             return account;
@@ -1285,7 +1287,10 @@ public class TelecomAccountRegistry {
         @Override
         public void onServiceStateChanged(ServiceState serviceState) {
             int newState = serviceState.getState();
+            Log.i(this, "onServiceStateChanged: newState=%d, mServiceState=%d",
+                    newState, mServiceState);
             if (newState == ServiceState.STATE_IN_SERVICE && mServiceState != newState) {
+                Log.i(this, "onServiceStateChanged: Tearing down and re-setting up accounts.");
                 tearDownAccounts();
                 setupAccounts();
             } else {
@@ -1867,6 +1872,7 @@ public class TelecomAccountRegistry {
 
             // Add a fake account entry.
             if (DBG && phones.length > 0 && "TRUE".equals(System.getProperty("test_sim"))) {
+                Log.i(this, "setupAccounts: adding a fake AccountEntry");
                 mAccounts.add(new AccountEntry(phones[0], false /* emergency */,
                         true /* isTest */));
             }
