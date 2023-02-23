@@ -58,6 +58,8 @@ import com.android.internal.telephony.emergency.EmergencyNumberTracker;
 import com.android.internal.telephony.util.TelephonyUtils;
 import com.android.modules.utils.BasicShellCommandHandler;
 import com.android.phone.callcomposer.CallComposerPictureManager;
+import com.android.phone.euicc.EuiccUiDispatcherActivity;
+import com.android.phone.utils.CarrierAllowListInfo;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -99,6 +101,8 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
     private static final String ENABLE = "enable";
     private static final String DISABLE = "disable";
     private static final String QUERY = "query";
+    private static final String CARRIER_RESTRICTION_STATUS_TEST = "carrier_restriction_status_test";
+    private final String QUOTES = "\"";
 
     private static final String CALL_COMPOSER_TEST_MODE = "test-mode";
     private static final String CALL_COMPOSER_SIMULATE_CALL = "simulate-outgoing-call";
@@ -119,6 +123,9 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
     private static final String CC_SET_VALUE = "set-value";
     private static final String CC_SET_VALUES_FROM_XML = "set-values-from-xml";
     private static final String CC_CLEAR_VALUES = "clear-values";
+
+    private static final String EUICC_SUBCOMMAND = "euicc";
+    private static final String EUICC_SET_UI_COMPONENT = "set-euicc-uicomponent";
 
     private static final String GBA_SUBCOMMAND = "gba";
     private static final String GBA_SET_SERVICE = "set-service";
@@ -314,6 +321,8 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
                 return handleBackupCallingCommand();
             case END_BLOCK_SUPPRESSION:
                 return handleEndBlockSuppressionCommand();
+            case EUICC_SUBCOMMAND:
+                return handleEuiccCommand();
             case GBA_SUBCOMMAND:
                 return handleGbaCommand();
             case D2D_SUBCOMMAND:
@@ -345,6 +354,8 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
                 return handleGetSimSlotsMapping();
             case RADIO_SUBCOMMAND:
                 return handleRadioCommand();
+            case CARRIER_RESTRICTION_STATUS_TEST:
+                return handleCarrierRestrictionStatusCommand();
             default: {
                 return handleDefaultCommands(cmd);
             }
@@ -613,6 +624,15 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
         pw.println("    Options are:");
         pw.println("      -s: The SIM slot ID to clear carrier config values for. If no option");
         pw.println("          is specified, it will choose the default voice SIM slot.");
+    }
+
+    private void onHelpEuicc() {
+        PrintWriter pw = getOutPrintWriter();
+        pw.println("Euicc Commands:");
+        pw.println("  euicc set-euicc-uicomponent COMPONENT_NAME PACKAGE_NAME");
+        pw.println("  Sets the Euicc Ui-Component which handles EuiccService Actions.");
+        pw.println("  COMPONENT_NAME: The component name which handles UI Actions.");
+        pw.println("  PACKAGE_NAME: THe package name in which ui component belongs.");
     }
 
     private void onHelpGba() {
@@ -2104,6 +2124,35 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
         return 0;
     }
 
+    private int handleEuiccCommand() {
+        String arg = getNextArg();
+        if (arg == null) {
+            onHelpEuicc();
+            return 0;
+        }
+
+        switch (arg) {
+            case EUICC_SET_UI_COMPONENT: {
+                return handleEuiccServiceCommand();
+            }
+        }
+        return -1;
+    }
+
+    private int handleEuiccServiceCommand() {
+        String uiComponent = getNextArg();
+        String packageName = getNextArg();
+        if (packageName == null || uiComponent == null) {
+            return -1;
+        }
+        EuiccUiDispatcherActivity.setTestEuiccUiComponent(packageName, uiComponent);
+        if (VDBG) {
+            Log.v(LOG_TAG, "euicc set-euicc-uicomponent " + uiComponent +" "
+                    + packageName);
+        }
+        return 0;
+    }
+
     private int handleRestartModemCommand() {
         // Verify that the user is allowed to run the command. Only allowed in rooted device in a
         // non user build.
@@ -3061,5 +3110,75 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
         }
 
         return -1;
+    }
+
+    private int handleCarrierRestrictionStatusCommand() {
+        try {
+            String MOCK_MODEM_SERVICE_NAME = "android.telephony.mockmodem.MockModemService";
+            if (!(checkShellUid() && MOCK_MODEM_SERVICE_NAME.equalsIgnoreCase(
+                    mInterface.getModemService()))) {
+                Log.v(LOG_TAG,
+                        "handleCarrierRestrictionStatusCommand, MockModem service check fails or "
+                                + " checkShellUid fails");
+                return -1;
+            }
+        } catch (RemoteException ex) {
+            ex.printStackTrace();
+        }
+        String callerInfo = getNextOption();
+        CarrierAllowListInfo allowListInfo = CarrierAllowListInfo.loadInstance(mContext);
+        if (TextUtils.isEmpty(callerInfo)) {
+            // reset the Json content after testing
+            allowListInfo.updateJsonForTest(null);
+            return 0;
+        }
+        if (callerInfo.startsWith("--")) {
+            callerInfo = callerInfo.replace("--", "");
+        }
+        String params[] = callerInfo.split(",");
+        StringBuffer jsonStrBuffer = new StringBuffer();
+        String tokens;
+        for (int index = 0; index < params.length; index++) {
+            tokens = convertToJsonString(index, params[index]);
+            if (TextUtils.isEmpty(tokens)) {
+                // received wrong format from CTS
+                if (VDBG) {
+                    Log.v(LOG_TAG,
+                            "handleCarrierRestrictionStatusCommand, Shell command parsing error");
+                }
+                return -1;
+            }
+            jsonStrBuffer.append(tokens);
+        }
+        int result = allowListInfo.updateJsonForTest(jsonStrBuffer.toString());
+        return result;
+    }
+
+
+    /**
+     * Building the string that can be used to build the JsonObject which supports to stub the data
+     * in CarrierAllowListInfo for CTS testing. sample format is like
+     * {"com.android.example":{"carrierId":"10000","callerSHA1Id":["XXXXXXXXXXXXXX"]}}
+     */
+    private String convertToJsonString(int index, String param) {
+
+        String token[] = param.split(":");
+        String jSonString;
+        switch (index) {
+            case 0:
+                jSonString = "{" + QUOTES + token[1] + QUOTES + ":";
+                break;
+            case 1:
+                jSonString =
+                        "{" + QUOTES + token[0] + QUOTES + ":" + QUOTES + token[1] + QUOTES + ",";
+                break;
+            case 2:
+                jSonString =
+                        QUOTES + token[0] + QUOTES + ":" + "[" + QUOTES + token[1] + QUOTES + "]}}";
+                break;
+            default:
+                jSonString = null;
+        }
+        return jSonString;
     }
 }

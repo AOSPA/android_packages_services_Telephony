@@ -544,6 +544,8 @@ public class PhoneGlobals extends ContextWrapper {
 
             imsRcsController = ImsRcsController.init(this);
 
+            configLoader = CarrierConfigLoader.init(this);
+
             if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_TELEPHONY_IMS)) {
                 mImsStateCallbackController =
                         ImsStateCallbackController.make(this, PhoneFactory.getPhones().length);
@@ -554,8 +556,6 @@ public class PhoneGlobals extends ContextWrapper {
                 mImsProvisioningController =
                         ImsProvisioningController.make(this, PhoneFactory.getPhones().length);
             }
-
-            configLoader = CarrierConfigLoader.init(this);
 
             // Create the CallNotifier singleton, which handles
             // asynchronous events from the telephony layer (like
