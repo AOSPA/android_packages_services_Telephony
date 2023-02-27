@@ -95,6 +95,8 @@ public class CallBarringEditPreference extends EditPinPreference {
     private Client mClient;
     private QtiImsExtConnector mQtiImsExtConnector;
     private QtiImsExtManager mQtiImsExtManager;
+    // Flag determines whether set call barring request was sent over IMS
+    private boolean mImsSetCallBarringRequest = false;
 
     private static final int PW_LENGTH = 4;
 
@@ -206,6 +208,11 @@ public class CallBarringEditPreference extends EditPinPreference {
     }
 
     private void queryImsCallBarringStatus() {
+        if (mQtiImsExtManager == null) {
+            Log.e(LOG_TAG, "IMS Service not connected");
+            sendErrorResponse();
+            return;
+        }
         try {
             mQtiImsExtManager.queryCallBarring(mPhone.getPhoneId(),
                     getCBTypeFromFacility(mFacility), "", getServiceClassForCallBarring(mPhone),
@@ -215,6 +222,10 @@ public class CallBarringEditPreference extends EditPinPreference {
                     "Exception = " + e);
             sendErrorResponse();
         }
+    }
+
+    void setImsSetCallBarringRequest(boolean status) {
+        mImsSetCallBarringRequest = status;
     }
 
     private void sendErrorResponse() {
@@ -461,7 +472,10 @@ public class CallBarringEditPreference extends EditPinPreference {
 
             AsyncResult ar = (AsyncResult) msg.obj;
 
-            if (msg.arg2 == MESSAGE_SET_CALL_BARRING) {
+            if (msg.arg2 == MESSAGE_SET_CALL_BARRING || pref.mImsSetCallBarringRequest) {
+                // This block is triggered when GET_CALL_BARRING request that caused this response
+                // is because of the user setting call barring option on UI
+                pref.setImsSetCallBarringRequest(false);
                 pref.mTcpListener.onFinished(pref, false);
             } else {
                 pref.mTcpListener.onFinished(pref, true);
@@ -510,11 +524,16 @@ public class CallBarringEditPreference extends EditPinPreference {
                 Log.i(LOG_TAG, "handleSetCallBarringResponse: ar.exception=" + ar.exception);
             }
             Log.i(LOG_TAG, "handleSetCallBarringResponse: re-get call barring option");
-            pref.mPhone.getCallBarring(
-                    pref.mFacility,
-                    "",
-                    obtainMessage(MESSAGE_GET_CALL_BARRING, 0, MESSAGE_SET_CALL_BARRING,
-                            ar.exception), getServiceClassForCallBarring(pref.mPhone));
+            if (!pref.mPhone.isUtEnabled()) {
+                pref.mPhone.getCallBarring(
+                        pref.mFacility,
+                        "",
+                        obtainMessage(MESSAGE_GET_CALL_BARRING, 0, MESSAGE_SET_CALL_BARRING,
+                                ar.exception), getServiceClassForCallBarring(pref.mPhone));
+            } else {
+                pref.setImsSetCallBarringRequest(true);
+                pref.queryImsCallBarringStatus();
+            }
         }
     }
 }
