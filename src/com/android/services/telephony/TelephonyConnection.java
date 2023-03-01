@@ -50,11 +50,13 @@ import android.telephony.ServiceState;
 import android.telephony.ServiceState.RilRadioTechnology;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.emergency.EmergencyNumber;
 import android.telephony.ims.ImsCallProfile;
 import android.telephony.ims.ImsReasonInfo;
 import android.telephony.ims.ImsStreamMediaProfile;
 import android.telephony.ims.RtpHeaderExtension;
 import android.telephony.ims.RtpHeaderExtensionType;
+import android.telephony.ims.feature.MmTelFeature;
 import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Pair;
@@ -150,7 +152,8 @@ abstract class TelephonyConnection extends Connection implements Holdable,
     private static final int MSG_REJECT = 21;
     private static final int MSG_DTMF_DONE = 22;
     private static final int MSG_MEDIA_ATTRIBUTES_CHANGED = 23;
-    private static final int MSG_CONNECTION_REMOVED = 24;
+    private static final int MSG_ON_RTT_INITIATED = 24;
+    private static final int MSG_CONNECTION_REMOVED = 25;
 
     private static final String JAPAN_COUNTRY_CODE_WITH_PLUS_SIGN = "+81";
     private static final String JAPAN_ISO_COUNTRY_CODE = "JP";
@@ -359,6 +362,15 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                     } finally {
                         args.recycle();
                     }
+                    break;
+                case MSG_ON_RTT_INITIATED:
+                    if (mOriginalConnection != null) {
+                        // if mOriginalConnection is null, the properties will get set when
+                        // mOriginalConnection gets set.
+                        updateConnectionProperties();
+                        refreshConferenceSupported();
+                    }
+                    sendRttInitiationSuccess();
                     break;
             }
         }
@@ -811,13 +823,11 @@ abstract class TelephonyConnection extends Connection implements Holdable,
 
         @Override
         public void onRttInitiated() {
-            if (mOriginalConnection != null) {
-                // if mOriginalConnection is null, the properties will get set when
-                // mOriginalConnection gets set.
-                updateConnectionProperties();
-                refreshConferenceSupported();
-            }
-            sendRttInitiationSuccess();
+            Log.i(TelephonyConnection.this, "onRttInitiated: callId=%s", getTelecomCallId());
+            // Post RTT initiation to the Handler associated with this TelephonyConnection.
+            // This avoids a race condition where a call starts as RTT but ConnectionService call to
+            // handleCreateConnectionComplete happens AFTER the RTT status is reported to Telecom.
+            mHandler.obtainMessage(MSG_ON_RTT_INITIATED).sendToTarget();
         }
 
         @Override
@@ -862,6 +872,13 @@ abstract class TelephonyConnection extends Connection implements Holdable,
             Log.i(this, "onReceivedDtmfDigit: digit=%c", digit);
             mDtmfTransport.onDtmfReceived(digit);
         }
+
+        @Override
+        public void onAudioModeIsVoipChanged(int imsAudioHandler) {
+            boolean isVoip = imsAudioHandler == MmTelFeature.AUDIO_HANDLER_ANDROID;
+            Log.i(this, "onAudioModeIsVoipChanged isVoip =" + isVoip);
+            setAudioModeIsVoip(isVoip);
+        }
     };
 
     private TelephonyConnectionService mTelephonyConnectionService;
@@ -875,6 +892,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
     private RttTextStream mRttTextStream = null;
 
     private boolean mWasImsConnection;
+    private boolean mWasCrossSim;
 
     /**
      * Tracks the multiparty state of the ImsCall so that changes in the bit state can be detected.
@@ -990,6 +1008,8 @@ abstract class TelephonyConnection extends Connection implements Holdable,
      */
     private final Set<TelephonyConnectionListener> mTelephonyListeners = Collections.newSetFromMap(
             new ConcurrentHashMap<TelephonyConnectionListener, Boolean>(8, 0.9f, 1));
+
+    private Integer mEmergencyServiceCategory = null;
 
     protected TelephonyConnection(com.android.internal.telephony.Connection originalConnection,
             String callId, @android.telecom.Call.Details.CallDirection int callDirection) {
@@ -2338,7 +2358,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
         mPhoneForEvents = null;
     }
 
-    @VisibleForTesting
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PROTECTED)
     public void hangup(int telephonyDisconnectCode) {
         if (mOriginalConnection != null) {
             if (mHangupDisconnectCause != DisconnectCause.NOT_VALID) {
@@ -2368,6 +2388,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                 Log.e(this, e, "Call to Connection.hangup failed with exception");
             }
         } else {
+            mTelephonyConnectionService.onLocalHangup(this);
             if (getState() == STATE_DISCONNECTED) {
                 Log.i(this, "hangup called on an already disconnected call!");
                 close();
@@ -2545,12 +2566,11 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                                 ImsCallProfile.EXTRA_CONFERENCE_AVAIL)) {
                         updateConnectionCapabilities();
                     }
-                    // If extras contain Cross Sim information,
-                    // then ensure capabilities are updated and propagated to Telecom.
                     // Also, update the status hints in the case the call has
                     // has moved from cross sim call back to wifi
-                    if (mOriginalConnectionExtras.containsKey(
-                                ImsCallProfile.EXTRA_IS_CROSS_SIM_CALL)) {
+                    mWasCrossSim |= mOriginalConnectionExtras.containsKey(
+                                ImsCallProfile.EXTRA_IS_CROSS_SIM_CALL);
+                    if (mWasCrossSim) {
                         updateStatusHints();
                         updateConnectionProperties();
                     }
@@ -2644,6 +2664,29 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                     setTelephonyConnectionRinging();
                     break;
                 case DISCONNECTED:
+                    if (mTelephonyConnectionService != null) {
+                        ImsReasonInfo reasonInfo = null;
+                        if (isImsConnection()) {
+                            ImsPhoneConnection imsPhoneConnection =
+                                    (ImsPhoneConnection) mOriginalConnection;
+                            reasonInfo = imsPhoneConnection.getImsReasonInfo();
+                            if (reasonInfo != null && reasonInfo.getCode()
+                                    == ImsReasonInfo.CODE_SIP_ALTERNATE_EMERGENCY_CALL) {
+                                EmergencyNumber emergencyNumber =
+                                        imsPhoneConnection.getEmergencyNumberInfo();
+                                if (emergencyNumber != null) {
+                                    mEmergencyServiceCategory =
+                                            emergencyNumber.getEmergencyServiceCategoryBitmask();
+                                }
+                            }
+                        }
+
+                        if (mTelephonyConnectionService.maybeReselectDomain(this,
+                                  mOriginalConnection.getPreciseDisconnectCause(), reasonInfo)) {
+                            break;
+                        }
+                    }
+
                     if (shouldTreatAsEmergencyCall()
                             && (cause
                             == android.telephony.DisconnectCause.EMERGENCY_TEMP_FAILURE
@@ -4072,6 +4115,23 @@ abstract class TelephonyConnection extends Connection implements Holdable,
     @VisibleForTesting
     public List<TelephonyConnectionListener> getTelephonyConnectionListeners() {
         return new ArrayList<>(mTelephonyListeners);
+    }
+
+    /**
+     * @return An {@link Integer} instance of the emergency service category.
+     */
+    public @Nullable Integer getEmergencyServiceCategory() {
+        return mEmergencyServiceCategory;
+    }
+
+    /**
+     * Sets the emergency service category.
+     *
+     * @param eccCategory The emergency service category.
+     */
+    @VisibleForTesting
+    public void setEmergencyServiceCategory(int eccCategory) {
+        mEmergencyServiceCategory = eccCategory;
     }
 
     /* Disables context based swap to make use of new DSDA hold APIs */

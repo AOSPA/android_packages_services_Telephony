@@ -665,7 +665,7 @@
     <string name="preference_category_ringtone" msgid="8787281191375434976">"Ton de chamada e vibración"</string>
     <string name="pstn_connection_service_label" msgid="9200102709997537069">"Tarxetas SIM integradas"</string>
     <string name="enable_video_calling_title" msgid="7246600931634161830">"Activar videochamadas"</string>
-    <string name="enable_video_calling_dialog_msg" msgid="7141478720386203540">"Para activar as videochamadas, necesitas activar o Modo LTE 4G mellorado na configuración do sistema."</string>
+    <string name="enable_video_calling_dialog_msg" msgid="7141478720386203540">"Para activar as videochamadas, necesitas activar o modo LTE 4G mellorado na configuración do sistema."</string>
     <string name="enable_video_calling_dialog_settings" msgid="8697890611305307110">"Configuración de rede"</string>
     <string name="enable_video_calling_dialog_close" msgid="4298929725917045270">"Pechar"</string>
     <string name="sim_label_emergency_calls" msgid="9078241989421522310">"Chamadas de emerxencia"</string>
@@ -862,6 +862,7 @@
     <string name="radioInfo_data_connected" msgid="7637335645634239508">"Conectada"</string>
     <string name="radioInfo_data_suspended" msgid="8695262782642002785">"Suspendido"</string>
     <string name="radioInfo_unknown" msgid="5401423738500672850">"Descoñecido"</string>
+    <string name="radioInfo_imei_primary" msgid="5948747378637224400">"Principal"</string>
     <string name="radioInfo_display_packets" msgid="6794302192441084157">"pkts"</string>
     <string name="radioInfo_display_bytes" msgid="7701006329222413797">"bytes"</string>
     <string name="radioInfo_display_dbm" msgid="7491944975710865703">"dBm"</string>

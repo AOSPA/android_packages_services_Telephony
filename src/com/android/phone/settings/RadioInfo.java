@@ -29,6 +29,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Typeface;
+import android.hardware.radio.modem.ImeiInfo;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -1311,6 +1312,7 @@ public class RadioInfo extends AppCompatActivity {
 
         s = mPhone.getSubscriberId();
         if (s == null) s = r.getString(R.string.radioInfo_unknown);
+
         mSubscriberId.setText(s);
 
         SubscriptionManager subMgr = getSystemService(SubscriptionManager.class);
