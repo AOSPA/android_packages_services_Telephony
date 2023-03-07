@@ -1040,7 +1040,7 @@ public class TelecomAccountRegistry {
                 String[] supportedCountries = mContext.getResources().getStringArray(
                         R.array.config_simless_emergency_rtt_supported_countries);
                 if ((supportedCountries == null || Arrays.stream(supportedCountries).noneMatch(
-                        Predicate.isEqual(country))) && !(QtiImsUtils.isSimLessRttSupported(
+                        Predicate.isEqual(country))) || !(QtiImsUtils.isSimLessRttSupported(
                         mPhone.getPhoneId(), mPhone.getContext()) && isUserRttSettingOn())) {
                     Log.i(this, "isRttCurrentlySupported -- emergency acct and"
                             + " not supported in this country: " + country);
