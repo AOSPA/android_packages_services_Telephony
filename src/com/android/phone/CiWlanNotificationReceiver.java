@@ -95,6 +95,11 @@ public class CiWlanNotificationReceiver extends BroadcastReceiver {
                 boolean show = intent.getBooleanExtra(C_IWLAN_NOTIFICATION_STATUS, false);
                 int phoneId = intent.getIntExtra(C_IWLAN_NOTIFICATION_PHONE_ID,
                         SubscriptionManager.INVALID_PHONE_INDEX);
+                if (SubscriptionManager.getSubscriptionId(phoneId) !=
+                        SubscriptionManager.getDefaultDataSubscriptionId()) {
+                    Log.d(TAG, "Notification not supported for nDDS, ignoring...");
+                    return;
+                }
                 Log.d(TAG, "ACTION_DISABLE_C_IWLAN_NOTIFICATION: " + show + " phoneId: " + phoneId);
                 toggleNotification(show, phoneId, context.getApplicationContext());
                 break;
@@ -131,14 +136,14 @@ public class CiWlanNotificationReceiver extends BroadcastReceiver {
 
     private void showNotification(Context context, int phoneId) {
         Log.d(TAG, "showNotification phoneId: " + phoneId);
-
         Resources resources = context.getResources();
-
         createNotificationChannel(resources);
-
         // Build the positive button that launches the UI to disable C_IWLAN
-        Intent ciwlanIntent = new Intent(android.provider.Settings.ACTION_DATA_ROAMING_SETTINGS);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, ciwlanIntent,
+        Intent ciwlanIntent = new Intent(
+                android.provider.Settings.ACTION_NETWORK_OPERATOR_SETTINGS);
+        ciwlanIntent.putExtra(Settings.EXTRA_SUB_ID,
+                SubscriptionManager.getSubscriptionId(phoneId));
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, phoneId, ciwlanIntent,
                 PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Action ciwlanSettingAction = new NotificationCompat.Action.Builder(0,
                 resources.getString(R.string.c_iwlan_exit_notification_positive_button),
