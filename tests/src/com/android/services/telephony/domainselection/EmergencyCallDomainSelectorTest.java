@@ -18,6 +18,7 @@ package com.android.services.telephony.domainselection;
 
 import static android.telephony.AccessNetworkConstants.AccessNetworkType.EUTRAN;
 import static android.telephony.AccessNetworkConstants.AccessNetworkType.GERAN;
+import static android.telephony.AccessNetworkConstants.AccessNetworkType.NGRAN;
 import static android.telephony.AccessNetworkConstants.AccessNetworkType.UNKNOWN;
 import static android.telephony.AccessNetworkConstants.AccessNetworkType.UTRAN;
 import static android.telephony.BarringInfo.BARRING_SERVICE_TYPE_EMERGENCY;
@@ -59,6 +60,7 @@ import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -268,7 +270,7 @@ public class EmergencyCallDomainSelectorTest {
 
         verify(mWwanSelectorCallback, times(0)).onRequestEmergencyNetworkScan(
                 any(), anyInt(), any(), any());
-        verify(mWwanSelectorCallback, times(0)).onDomainSelected(anyInt());
+        verify(mWwanSelectorCallback, times(0)).onDomainSelected(anyInt(), eq(true));
     }
 
     @Test
@@ -983,13 +985,13 @@ public class EmergencyCallDomainSelectorTest {
         assertTrue(mDomainSelector.hasMessages(MSG_NETWORK_SCAN_TIMEOUT));
 
         // Wi-Fi is not connected.
-        verify(mTransportSelectorCallback, times(0)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(0)).onWlanSelected(anyBoolean());
 
         // Wi-Fi is connected.
         mNetworkCallback.onAvailable(null);
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(1)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(1)).onWlanSelected(eq(true));
     }
 
     @Test
@@ -1015,20 +1017,20 @@ public class EmergencyCallDomainSelectorTest {
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
         // Wi-Fi is not connected.
-        verify(mTransportSelectorCallback, times(0)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(0)).onWlanSelected(anyBoolean());
 
         // Wi-Fi is connected. But Wi-Fi calling setting is disabled.
         mNetworkCallback.onAvailable(null);
         when(mMmTelManager.isVoWiFiRoamingSettingEnabled()).thenReturn(false);
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(0)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(0)).onWlanSelected(anyBoolean());
 
         // Wi-Fi is connected and Wi-Fi calling setting is enabled.
         when(mMmTelManager.isVoWiFiSettingEnabled()).thenReturn(true);
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(1)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(1)).onWlanSelected(eq(true));
     }
 
     @Test
@@ -1054,19 +1056,19 @@ public class EmergencyCallDomainSelectorTest {
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
         // Wi-Fi is not connected.
-        verify(mTransportSelectorCallback, times(0)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(0)).onWlanSelected(anyBoolean());
 
         // Wi-Fi is connected. But Wi-Fi calling s not activated.
         mNetworkCallback.onAvailable(null);
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(0)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(0)).onWlanSelected(anyBoolean());
 
         // Wi-Fi is connected and Wi-Fi calling is activated.
         doReturn("1").when(mProvisioningManager).getProvisioningStringValue(anyInt());
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(1)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(1)).onWlanSelected(eq(true));
     }
 
     @Test
@@ -1087,19 +1089,19 @@ public class EmergencyCallDomainSelectorTest {
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
         // Wi-Fi is not connected.
-        verify(mTransportSelectorCallback, times(0)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(0)).onWlanSelected(anyBoolean());
 
         // Wi-Fi is connected but IMS is not registered over Wi-Fi.
         mNetworkCallback.onAvailable(null);
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(0)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(0)).onWlanSelected(anyBoolean());
 
         // IMS is registered over Wi-Fi.
         bindImsService(true);
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(1)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(1)).onWlanSelected(eq(false));
     }
 
     @Test
@@ -1126,13 +1128,13 @@ public class EmergencyCallDomainSelectorTest {
 
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
-        verify(mTransportSelectorCallback, times(1)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(1)).onWlanSelected(eq(false));
 
         // duplicated event
         mDomainSelector.handleMessage(mDomainSelector.obtainMessage(MSG_NETWORK_SCAN_TIMEOUT));
 
         // ignore duplicated callback, no change in interaction
-        verify(mTransportSelectorCallback, times(1)).onWlanSelected();
+        verify(mTransportSelectorCallback, times(1)).onWlanSelected(anyBoolean());
     }
 
     @Test
@@ -1240,7 +1242,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false));
+        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false, false));
     }
 
     @Test
@@ -1254,7 +1256,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyPsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false));
+        verifyPsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false, false));
     }
 
     @Test
@@ -1269,7 +1271,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(false));
+        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(false, false));
     }
 
     @Test
@@ -1284,7 +1286,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyCsOnlyScanList(mDomainSelector.getNextPreferredNetworks(false));
+        verifyCsOnlyScanList(mDomainSelector.getNextPreferredNetworks(false, false));
 
     }
 
@@ -1299,7 +1301,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true));
+        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true, false));
     }
 
     @Test
@@ -1313,7 +1315,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true));
+        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true, false));
     }
 
     @Test
@@ -1329,7 +1331,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(true));
+        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(true, false));
     }
 
     @Test
@@ -1344,7 +1346,7 @@ public class EmergencyCallDomainSelectorTest {
 
         setupForScanListTest(bundle);
 
-        verifyCsOnlyScanList(mDomainSelector.getNextPreferredNetworks(true));
+        verifyCsOnlyScanList(mDomainSelector.getNextPreferredNetworks(true, false));
     }
 
     @Test
@@ -1361,7 +1363,7 @@ public class EmergencyCallDomainSelectorTest {
         bindImsService();
         processAllMessages();
 
-        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false));
+        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false, false));
     }
 
     @Test
@@ -1378,7 +1380,7 @@ public class EmergencyCallDomainSelectorTest {
         bindImsService();
         processAllMessages();
 
-        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false));
+        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(false, false));
     }
 
     @Test
@@ -1396,7 +1398,7 @@ public class EmergencyCallDomainSelectorTest {
         bindImsService();
         processAllMessages();
 
-        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(false));
+        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(false, false));
     }
 
     @Test
@@ -1413,7 +1415,7 @@ public class EmergencyCallDomainSelectorTest {
         bindImsService();
         processAllMessages();
 
-        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true));
+        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true, false));
     }
 
     @Test
@@ -1430,7 +1432,7 @@ public class EmergencyCallDomainSelectorTest {
         bindImsService();
         processAllMessages();
 
-        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true));
+        verifyCsPreferredScanList(mDomainSelector.getNextPreferredNetworks(true, false));
     }
 
     @Test
@@ -1449,7 +1451,32 @@ public class EmergencyCallDomainSelectorTest {
         bindImsService();
         processAllMessages();
 
-        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(true));
+        verifyPsOnlyScanList(mDomainSelector.getNextPreferredNetworks(true, false));
+    }
+
+    @Test
+    public void testEpsFallbackThenCsPreference() throws Exception {
+        PersistableBundle bundle = getDefaultPersistableBundle();
+        int[] domainPreference = new int[] {
+                CarrierConfigManager.ImsEmergency.DOMAIN_PS_3GPP,
+                CarrierConfigManager.ImsEmergency.DOMAIN_CS,
+                };
+        bundle.putIntArray(KEY_EMERGENCY_DOMAIN_PREFERENCE_INT_ARRAY, domainPreference);
+        bundle.putIntArray(KEY_EMERGENCY_OVER_IMS_SUPPORTED_3GPP_NETWORK_TYPES_INT_ARRAY,
+                    new int[] { NGRAN, EUTRAN });
+
+        setupForScanListTest(bundle);
+
+        List<Integer> networks = mDomainSelector.getNextPreferredNetworks(false, true);
+
+        assertFalse(networks.isEmpty());
+        assertTrue(networks.contains(EUTRAN));
+        assertTrue(networks.contains(NGRAN));
+        assertTrue(networks.contains(UTRAN));
+        assertTrue(networks.contains(GERAN));
+        assertTrue(networks.indexOf(EUTRAN) < networks.indexOf(UTRAN));
+        assertTrue(networks.indexOf(UTRAN) < networks.indexOf(GERAN));
+        assertTrue(networks.indexOf(GERAN) < networks.indexOf(NGRAN));
     }
 
     private void setupForScanListTest(PersistableBundle bundle) throws Exception {
@@ -1533,12 +1560,12 @@ public class EmergencyCallDomainSelectorTest {
 
     private void verifyCsDialed() {
         processAllMessages();
-        verify(mWwanSelectorCallback, times(1)).onDomainSelected(eq(DOMAIN_CS));
+        verify(mWwanSelectorCallback, times(1)).onDomainSelected(eq(DOMAIN_CS), eq(false));
     }
 
     private void verifyPsDialed() {
         processAllMessages();
-        verify(mWwanSelectorCallback, times(1)).onDomainSelected(eq(DOMAIN_PS));
+        verify(mWwanSelectorCallback, times(1)).onDomainSelected(eq(DOMAIN_PS), eq(true));
     }
 
     private void verifyScanPsPreferred() {
