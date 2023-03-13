@@ -44,6 +44,8 @@ import android.util.Log;
 import com.android.internal.telephony.EcbmHandler;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.TelephonyIntents;
+import com.android.internal.telephony.domainselection.DomainSelectionResolver;
+import com.android.internal.telephony.emergency.EmergencyStateTracker;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -247,12 +249,19 @@ public class EmergencyCallbackModeExitDialog extends Activity implements OnCance
                     .setMessage(text)
                     .setPositiveButton(R.string.alert_dialog_yes,
                             new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog,int whichButton) {
+                                public void onClick(DialogInterface dialog,
+                                        int whichButton) {
                                     // User clicked Yes. Exit Emergency Callback Mode.
-                                    try {
-                                        mEcbmHandler.exitEmergencyCallbackMode();
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
+                                    if (DomainSelectionResolver.getInstance()
+                                            .isDomainSelectionSupported()) {
+                                        EmergencyStateTracker.getInstance()
+                                                .exitEmergencyCallbackMode();
+                                    } else {
+                                        try {
+                                            mEcbmHandler.exitEmergencyCallbackMode();
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                        }
                                     }
 
                                     // Show progress dialog

@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -54,7 +55,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.android.TelephonyTestBase;
 import com.android.internal.telephony.IccCardConstants;
+import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.SubscriptionInfoUpdater;
+import com.android.internal.telephony.subscription.SubscriptionManagerService;
 
 import org.junit.After;
 import org.junit.Before;
@@ -63,6 +66,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -87,6 +91,7 @@ public class CarrierConfigLoaderTest extends TelephonyTestBase {
     @Mock PackageManager mPackageManager;
     @Mock PackageInfo mPackageInfo;
     @Mock SubscriptionInfoUpdater mSubscriptionInfoUpdater;
+    @Mock SubscriptionManagerService mSubscriptionManagerService;
     @Mock SharedPreferences mSharedPreferences;
     @Mock TelephonyRegistryManager mTelephonyRegistryManager;
 
@@ -99,6 +104,9 @@ public class CarrierConfigLoaderTest extends TelephonyTestBase {
     @Before
     public void setUp() throws Exception {
         super.setUp();
+        MockitoAnnotations.initMocks(this);
+        replaceInstance(SubscriptionManagerService.class, "sInstance", null,
+                mSubscriptionManagerService);
 
         // TODO: replace doReturn/when with when/thenReturn which is more readable
         doReturn(mSharedPreferences).when(mContext).getSharedPreferences(anyString(), anyInt());
@@ -271,9 +279,15 @@ public class CarrierConfigLoaderTest extends TelephonyTestBase {
         mTestableLooper.processAllMessages();
 
         assertThat(mCarrierConfigLoader.getOverrideConfig(DEFAULT_PHONE_ID).isEmpty()).isTrue();
-        verify(mSubscriptionInfoUpdater).updateSubscriptionByCarrierConfigAndNotifyComplete(
-                eq(DEFAULT_PHONE_ID), eq(PLATFORM_CARRIER_CONFIG_PACKAGE),
-                any(PersistableBundle.class), any(Message.class));
+        if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
+            verify(mSubscriptionManagerService).updateSubscriptionByCarrierConfig(
+                    eq(DEFAULT_PHONE_ID), eq(PLATFORM_CARRIER_CONFIG_PACKAGE),
+                    any(PersistableBundle.class), any(Runnable.class));
+        } else {
+            verify(mSubscriptionInfoUpdater).updateSubscriptionByCarrierConfigAndNotifyComplete(
+                    eq(DEFAULT_PHONE_ID), eq(PLATFORM_CARRIER_CONFIG_PACKAGE),
+                    any(PersistableBundle.class), any(Message.class));
+        }
     }
 
     /**
@@ -294,9 +308,15 @@ public class CarrierConfigLoaderTest extends TelephonyTestBase {
 
         assertThat(mCarrierConfigLoader.getOverrideConfig(DEFAULT_PHONE_ID).getInt(
                 CARRIER_CONFIG_EXAMPLE_KEY)).isEqualTo(CARRIER_CONFIG_EXAMPLE_VALUE);
-        verify(mSubscriptionInfoUpdater).updateSubscriptionByCarrierConfigAndNotifyComplete(
-                eq(DEFAULT_PHONE_ID), eq(PLATFORM_CARRIER_CONFIG_PACKAGE),
-                any(PersistableBundle.class), any(Message.class));
+        if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
+            verify(mSubscriptionManagerService).updateSubscriptionByCarrierConfig(
+                    eq(DEFAULT_PHONE_ID), eq(PLATFORM_CARRIER_CONFIG_PACKAGE),
+                    any(PersistableBundle.class), any(Runnable.class));
+        } else {
+            verify(mSubscriptionInfoUpdater).updateSubscriptionByCarrierConfigAndNotifyComplete(
+                    eq(DEFAULT_PHONE_ID), eq(PLATFORM_CARRIER_CONFIG_PACKAGE),
+                    any(PersistableBundle.class), any(Message.class));
+        }
     }
 
     /**
@@ -409,5 +429,22 @@ public class CarrierConfigLoaderTest extends TelephonyTestBase {
         doReturn(hasCarrierPrivileges ? TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS
                 : TelephonyManager.CARRIER_PRIVILEGE_STATUS_NO_ACCESS).when(
                 mockTelephonyManager).getCarrierPrivilegeStatus(anyInt());
+    }
+
+    @Test
+    public void testMultiSimConfigChanged() throws Exception {
+        replaceInstance(TelephonyManager.class, "sInstance", null, mTelephonyManager);
+        mContext.grantPermission(STUB_PERMISSION_ENABLE_ALL);
+
+        // Changed from 1 to 2.
+        doReturn(2).when(mTelephonyManager).getActiveModemCount();
+        doReturn(true).when(mContext).bindService(
+                any(Intent.class), any(ServiceConnection.class), anyInt());
+        doNothing().when(mContext).sendBroadcastAsUser(any(Intent.class), any(UserHandle.class));
+        mHandler.sendMessage(mHandler.obtainMessage(17 /* EVENT_MULTI_SIM_CONFIG_CHANGED */));
+        mTestableLooper.processAllMessages();
+
+        mCarrierConfigLoader.updateConfigForPhoneId(1, IccCardConstants.INTENT_VALUE_ICC_ABSENT);
+        mTestableLooper.processAllMessages();
     }
 }

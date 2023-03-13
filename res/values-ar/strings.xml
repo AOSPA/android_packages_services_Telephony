@@ -575,7 +575,7 @@
     <string name="fire_type_description" msgid="6565200468934914930">"حريق"</string>
     <string name="description_concat_format" msgid="2014471565101724088">"‏%1$s، ‏%2$s‏"</string>
     <string name="dialerKeyboardHintText" msgid="1115266533703764049">"استخدام لوحة المفاتيح للطلب"</string>
-    <string name="onscreenHoldText" msgid="4025348842151665191">"تعليق"</string>
+    <string name="onscreenHoldText" msgid="4025348842151665191">"انتظار"</string>
     <string name="onscreenEndCallText" msgid="6138725377654842757">"الانتهاء"</string>
     <string name="onscreenShowDialpadText" msgid="658465753816164079">"لوحة الاتصال"</string>
     <string name="onscreenMuteText" msgid="5470306116733843621">"كتم الصوت"</string>
@@ -921,4 +921,8 @@
     <string name="call_quality_notification_bluetooth_details" msgid="8348950331707346711">"إشارة البلوتوث ضعيفة. حاوِل التبديل إلى مكبّر الصوت."</string>
     <string name="call_quality_notification_name" msgid="3476828289553948830">"إشعار بشأن جودة المكالمة"</string>
     <string name="notification_channel_sip_account" msgid="1261816025156179637">"‏حسابات SIP المتوقّفة"</string>
+    <string name="send_from_work_profile_title" msgid="9201528838448432473">"لا يمكن إرسال رسالة من هذا الملف الشخصي"</string>
+    <string name="send_from_work_profile_description" msgid="5002701841936861636">"تسمح لك سياسة العمل بإرسال الرسائل من الملف الشخصي للعمل فقط."</string>
+    <string name="send_from_work_profile_cancel" msgid="177746511030381711">"إلغاء"</string>
+    <string name="send_from_work_profile_action_str" msgid="6892775562934243337">"التبديل إلى الملف الشخصي للعمل"</string>
 </resources>

@@ -62,6 +62,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.ICarrierConfigLoader;
 import com.android.internal.telephony.IccCardConstants;
 import com.android.internal.telephony.Phone;
+import com.android.internal.telephony.PhoneConfigurationManager;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.SubscriptionInfoUpdater;
 import com.android.internal.telephony.TelephonyPermissions;
@@ -132,7 +133,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
     @NonNull private final SubscriptionInfoUpdater mSubscriptionInfoUpdater;
     // Whether the essential records have been loaded for each phone id.
     private boolean[] mIsEssentialSimRecordsLoaded;
-    // Broadcast receiver for system events (BootCompleted, MultiSimConfigChanged etc.)
+    // Broadcast receiver for system events
     @NonNull
     private final BroadcastReceiver mSystemBroadcastReceiver = new ConfigLoaderBroadcastReceiver();
     @NonNull private final LocalLog mCarrierConfigLoadingLog = new LocalLog(100);
@@ -710,7 +711,6 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
 
         IntentFilter systemEventsFilter = new IntentFilter();
         systemEventsFilter.addAction(Intent.ACTION_BOOT_COMPLETED);
-        systemEventsFilter.addAction(TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED);
         context.registerReceiver(mSystemBroadcastReceiver, systemEventsFilter);
 
         mNumPhones = TelephonyManager.from(context).getActiveModemCount();
@@ -734,6 +734,10 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
         }
         logd("CarrierConfigLoader has started");
         mSubscriptionInfoUpdater = subscriptionInfoUpdater;
+
+        PhoneConfigurationManager.registerForMultiSimConfigChange(
+                mHandler, EVENT_MULTI_SIM_CONFIG_CHANGED, null);
+
         mHandler.sendEmptyMessage(EVENT_CHECK_SYSTEM_UPDATE);
     }
 
@@ -768,6 +772,11 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
             }
         }
 
+        if (mConfigFromDefaultApp.length <= phoneId) {
+            Log.wtf(LOG_TAG, "Invalid phone id " + phoneId);
+            return;
+        }
+
         mConfigFromDefaultApp[phoneId] = null;
         mConfigFromCarrierApp[phoneId] = null;
         mServiceConnection[phoneId] = null;
@@ -782,6 +791,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
     }
 
     private void updateSubscriptionDatabase(int phoneId) {
+        logd("updateSubscriptionDatabase: phoneId=" + phoneId);
         String configPackageName;
         PersistableBundle configToSend;
         int carrierId = getSpecificCarrierIdForPhoneId(phoneId);
@@ -1888,10 +1898,6 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
             switch (intent.getAction()) {
                 case Intent.ACTION_BOOT_COMPLETED:
                     mHandler.sendMessage(mHandler.obtainMessage(EVENT_SYSTEM_UNLOCKED, null));
-                    break;
-
-                case TelephonyManager.ACTION_MULTI_SIM_CONFIG_CHANGED:
-                    mHandler.sendEmptyMessage(EVENT_MULTI_SIM_CONFIG_CHANGED);
                     break;
             }
         }
