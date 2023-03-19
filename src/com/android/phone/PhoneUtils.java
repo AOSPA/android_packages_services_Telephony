@@ -63,6 +63,9 @@ import com.android.internal.telephony.Call;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.Connection;
+import com.android.internal.telephony.FdnUtils;
+import com.android.internal.telephony.gsm.GsmMmiCode;
+import com.android.internal.telephony.gsm.SsData;
 import com.android.internal.telephony.IccCard;
 import com.android.internal.telephony.MmiCode;
 import com.android.internal.telephony.Phone;
@@ -77,7 +80,9 @@ import com.qti.extphone.ExtTelephonyManager;
 import com.qti.extphone.ServiceCallback;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import org.codeaurora.internal.IExtTelephony;
 
@@ -1019,6 +1024,17 @@ public class PhoneUtils {
         }
 
         return new CommandException(error);
+    }
+
+    public static boolean isRequestBlockedByFDN(SsData.RequestType requestType,
+            SsData.ServiceType serviceType, int phoneId, Context context) {
+        TelephonyManager telephonyManager =
+                (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        String countryIso = (telephonyManager != null) ?
+                telephonyManager.getNetworkCountryIso(phoneId).toUpperCase(Locale.ROOT) :
+                "";
+        ArrayList<String> controlStrings = GsmMmiCode.getControlStrings(requestType, serviceType);
+        return FdnUtils.isSuppServiceRequestBlockedByFdn(phoneId, controlStrings, countryIso);
     }
 
     /**

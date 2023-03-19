@@ -56,6 +56,8 @@ import static com.android.internal.telephony.CommandsInterface.CB_FACILITY_BA_MT
 import static com.android.internal.telephony.CommandsInterface.CB_FACILITY_BIC_ACR;
 
 import com.android.internal.telephony.CommandException;
+import com.android.internal.telephony.gsm.GsmMmiCode;
+import com.android.internal.telephony.gsm.SsData;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.phone.settings.fdn.EditPinPreference;
@@ -207,7 +209,21 @@ public class CallBarringEditPreference extends EditPinPreference {
         }
     }
 
+    private boolean isCbQueryBlockedByFdn() {
+        if (mPhone == null) {
+            return false;
+        }
+        SsData.ServiceType serviceType = GsmMmiCode.cbFacilityToServiceType(mFacility);
+        return PhoneUtils.isRequestBlockedByFDN(SsData.RequestType.SS_INTERROGATION, serviceType,
+                mPhone.getPhoneId(), getContext());
+    }
+
     private void queryImsCallBarringStatus() {
+        if (isCbQueryBlockedByFdn()) {
+            Log.d(LOG_TAG, "queryImsCallBarringStatus blocked by FDN check");
+            sendErrorResponse(CommandException.Error.FDN_CHECK_FAILURE);
+            return;
+        }
         if (mQtiImsExtManager == null) {
             Log.e(LOG_TAG, "IMS Service not connected");
             sendErrorResponse();
@@ -229,9 +245,12 @@ public class CallBarringEditPreference extends EditPinPreference {
     }
 
     private void sendErrorResponse() {
+        sendErrorResponse(CommandException.Error.GENERIC_FAILURE);
+    }
+
+    private void sendErrorResponse(CommandException.Error err) {
         Message msg = mHandler.obtainMessage(MyHandler.MESSAGE_GET_CALL_BARRING);
-        AsyncResult.forMessage(msg, null, new CommandException
-               (CommandException.Error.GENERIC_FAILURE));
+        AsyncResult.forMessage(msg, null, new CommandException(err));
         msg.sendToTarget();
     }
 
@@ -260,6 +279,12 @@ public class CallBarringEditPreference extends EditPinPreference {
     }
 
     private void getCallBarringWithExpectMore() {
+        if (isCbQueryBlockedByFdn()) {
+            Log.d(LOG_TAG, "getCallBarringWithExpectMore blocked by FDN check");
+            sendErrorResponse(CommandException.Error.FDN_CHECK_FAILURE);
+            return;
+        }
+
         if (!mExtTelephonyManager.isServiceConnected()) {
             sendErrorResponse();
             return;
