@@ -765,11 +765,16 @@ public class PhoneUtils {
 
     public static PhoneAccountHandle makePstnPhoneAccountHandleWithPrefix(
             Phone phone, String prefix, boolean isEmergency, UserHandle userHandle) {
-        // TODO: Should use some sort of special hidden flag to decorate this account as
-        // an emergency-only account
+        // To determine this as an emergency only, we are checking the simless case
+        // and updating the id based on that.
 
-        List<SubscriptionInfo> subList =
-                TelecomAccountRegistry.getInstance(null).getActiveSubscriptionInfoList();
+        TelecomAccountRegistry telecomAccountRegistry =
+                TelecomAccountRegistry.getInstance(null);
+        List<SubscriptionInfo> subList = null;
+        if (telecomAccountRegistry != null) {
+            subList = telecomAccountRegistry.getActiveSubscriptionInfoList();
+        }
+
         boolean isEmergencyOnlyAccount = subList != null && subList.size() == 0;
         String id = (isEmergency || isEmergencyOnlyAccount) ? EMERGENCY_ACCOUNT_HANDLE_ID : prefix +
                 String.valueOf((phone != null) ? phone.getSubId() : null);
