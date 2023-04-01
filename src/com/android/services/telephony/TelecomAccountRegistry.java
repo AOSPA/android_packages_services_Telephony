@@ -1808,9 +1808,8 @@ public class TelecomAccountRegistry {
                         Log.i(this, "setupAccounts: Phone with subscription id: " + subscriptionId +
                                 " slotId: " + slotId);
                         // setupAccounts can be called multiple times during service changes.
-                        // Don't add an account if the Icc has not been set yet.
-                        if (!SubscriptionManager.isValidSubscriptionId(subscriptionId)
-                                || phone.getFullIccSerialNumber() == null) {
+                        // Don't add an account if subscription is not ready.
+                        if (!SubscriptionManager.isValidSubscriptionId(subscriptionId)) {
                             Log.d(this, "setupAccounts: skipping invalid subid %d", subscriptionId);
                             // If device configured in dsds mode, a SIM removed and if corresponding
                             // phone is in ECM or SCBM then add emergency account to that sub so

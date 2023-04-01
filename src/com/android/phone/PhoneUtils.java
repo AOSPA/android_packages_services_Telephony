@@ -63,6 +63,9 @@ import com.android.internal.telephony.Call;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.Connection;
+import com.android.internal.telephony.FdnUtils;
+import com.android.internal.telephony.gsm.GsmMmiCode;
+import com.android.internal.telephony.gsm.SsData;
 import com.android.internal.telephony.IccCard;
 import com.android.internal.telephony.MmiCode;
 import com.android.internal.telephony.Phone;
@@ -77,7 +80,9 @@ import com.qti.extphone.ExtTelephonyManager;
 import com.qti.extphone.ServiceCallback;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import org.codeaurora.internal.IExtTelephony;
 
@@ -778,11 +783,11 @@ public class PhoneUtils {
         boolean isEmergencyOnlyAccount = subList != null && subList.size() == 0;
         String id = (isEmergency || isEmergencyOnlyAccount) ? EMERGENCY_ACCOUNT_HANDLE_ID : prefix +
                 String.valueOf((phone != null) ? phone.getSubId() : null);
-        return makePstnPhoneAccountHandleWithPrefix(id, prefix, isEmergency, userHandle);
+        return makePstnPhoneAccountHandleWithId(id, userHandle);
     }
 
-    public static PhoneAccountHandle makePstnPhoneAccountHandleWithPrefix(
-            String id, String prefix, boolean isEmergency, UserHandle userHandle) {
+    public static PhoneAccountHandle makePstnPhoneAccountHandleWithId(
+            String id, UserHandle userHandle) {
         ComponentName pstnConnectionServiceName = getPstnConnectionServiceName();
         // If user handle is null, resort to default constructor to use phone process's
         // user handle
@@ -1019,6 +1024,17 @@ public class PhoneUtils {
         }
 
         return new CommandException(error);
+    }
+
+    public static boolean isRequestBlockedByFDN(SsData.RequestType requestType,
+            SsData.ServiceType serviceType, int phoneId, Context context) {
+        TelephonyManager telephonyManager =
+                (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        String countryIso = (telephonyManager != null) ?
+                telephonyManager.getNetworkCountryIso(phoneId).toUpperCase(Locale.ROOT) :
+                "";
+        ArrayList<String> controlStrings = GsmMmiCode.getControlStrings(requestType, serviceType);
+        return FdnUtils.isSuppServiceRequestBlockedByFdn(phoneId, controlStrings, countryIso);
     }
 
     /**
