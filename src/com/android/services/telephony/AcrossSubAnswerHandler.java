@@ -40,11 +40,11 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /* Handles answering an incoming call when there is an ACTIVE call on the other sub */
-public class HoldAndAnswerHandler extends HoldHandlerBase {
+public class AcrossSubAnswerHandler extends AcrossSubHandlerBase {
     private TelephonyConnection mConnToAnswer = null;
     int mVideoState;
 
-    public HoldAndAnswerHandler(TelephonyConnection connToHold, TelephonyConnection connToAnswer,
+    public AcrossSubAnswerHandler(TelephonyConnection connToHold, TelephonyConnection connToAnswer,
                                 int videoState) {
         mConnToAnswer = connToAnswer;
         mConnToHold = connToHold;

@@ -45,8 +45,8 @@ import com.android.internal.telephony.CallStateException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/* Base class that handles across sub HOLD use cases for DSDA */
-public class HoldHandlerBase extends TelephonyConnection.TelephonyConnectionListener {
+/* Base class that handles across sub use cases (hold/disconnect) for DSDA */
+public class AcrossSubHandlerBase extends TelephonyConnection.TelephonyConnectionListener {
     private List<Listener> mListeners = new CopyOnWriteArrayList<>();
     protected TelephonyConnection mConnToHold = null;
 
@@ -55,16 +55,16 @@ public class HoldHandlerBase extends TelephonyConnection.TelephonyConnectionList
         void onCompleted(boolean status);
     }
 
-    public void addListener(HoldHandlerBase.Listener listener) {
+    public void addListener(AcrossSubHandlerBase.Listener listener) {
         mListeners.add(listener);
     }
 
-    public void removeListener(HoldHandlerBase.Listener listener) {
+    public void removeListener(AcrossSubHandlerBase.Listener listener) {
         mListeners.remove(listener);
     }
 
     protected void notifyOnCompleted(boolean status) {
-        for (HoldHandlerBase.Listener l : mListeners) {
+        for (AcrossSubHandlerBase.Listener l : mListeners) {
             l.onCompleted(status);
         }
     }

@@ -1360,7 +1360,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
     public void performAnswer(int videoState) {
         Log.v(this, "performAnswer");
         if (isValidRingingCall() && getPhone() != null) {
-            if (TelephonyManager.isConcurrentCallsPossible()) {
+            if (TelephonyManager.from(getPhone().getContext()).isDsdaOrDsdsTransitionMode()) {
                 // Disconnect dialing call when incoming call is accepted.
                 // Follow AOSP's approach for now. TODO:answer after disconnect completes
                 mTelephonyConnectionService.maybeDisconnectDialingCallsOnOtherSubs(
@@ -1403,6 +1403,8 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                     phone.getPhoneType() == PhoneConstants.PHONE_TYPE_IMS) {
                     ImsPhone imsPhone = (ImsPhone) phone;
                     imsPhone.holdActiveCallOnly();
+                    // Reset context based swap to default value once DSDA hold API is invoked
+                    disableContextBasedSwap(false);
                 }
             } catch (CallStateException e) {
                 Log.e(this, e, "Exception occurred while trying to put call on hold.");
@@ -1445,6 +1447,9 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                             // connection is only held and not swapped if there is another held
                             // connection on that sub
                             imsPhone.holdActiveCallOnly();
+                            // Reset context based swap to default value once DSDA hold API
+                            // is invoked
+                            disableContextBasedSwap(false);
                         } else {
                             imsPhone.holdActiveCall();
                         }
@@ -1483,6 +1488,8 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                             // TelephonyConnectionService
                             imsPhone.unholdHeldCall((ImsPhoneConnection)mOriginalConnection);
                         }
+                        // Reset context based swap to default value once DSDA hold API is invoked
+                        disableContextBasedSwap(false);
                     } else { // legacy unhold
                         imsPhone.unholdHeldCall();
                     }
@@ -2036,7 +2043,7 @@ abstract class TelephonyConnection extends Connection implements Holdable,
                     && imsPhone.getForegroundCall().getImsCall() != null) {
                 call = imsPhone.getForegroundCall().getImsCall();
             } else if (imsPhone.getBackgroundCall() != null) {
-                if (TelephonyManager.isConcurrentCallsPossible()) {
+                if (TelephonyManager.from(getPhone().getContext()).isDsdaOrDsdsTransitionMode()) {
                     ArrayList<com.android.internal.telephony.Connection> connections =
                                 imsPhone.getBackgroundCall().getConnections();
                     for (com.android.internal.telephony.Connection conn : connections) {
