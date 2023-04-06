@@ -687,17 +687,11 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
                 ", checkMobileDataForCb = " + mCheckData + " defaultDataSub is : " +
                 defaultDataSub + " current sub is : " + sub);
 
-        if (sub != defaultDataSub) {
-            if (mPhone.isUtEnabled()) {
-                Log.d(LOG_TAG, "Show data in use indication if data sub is not on current sub");
-                showDataInuseToast();
-                initCallBarring();
-                return;
-            } else {
-                Log.d(LOG_TAG, "Show dds switch dialog if data sub is not on current sub");
-                showSwitchDdsDialog(slotId);
-                return;
-            }
+        if (sub != defaultDataSub && mPhone.isUtEnabled()) {
+            Log.d(LOG_TAG, "Show data in use indication if data sub is not on current sub");
+            showDataInuseToast();
+            initCallBarring();
+            return;
         }
 
         if (mPhone.isUtEnabled() && mCheckData) {
@@ -759,37 +753,6 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
         String message = (String)this.getResources()
             .getText(R.string.mobile_data_alert);
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
-
-    private void showSwitchDdsDialog(int slotId) {
-        String title = (String)this.getResources().getText(R.string.no_mobile_data);
-        int simId = slotId + 1;
-        String message = (String)this.getResources()
-            .getText(R.string.switch_dds_to_sub_alert) + String.valueOf(simId);
-        if (mBuilder == null) {
-            mBuilder=new AlertDialog.Builder(this);
-            mBuilder.setTitle(title);
-            mBuilder.setMessage(message);
-            mBuilder.setIconAttribute(android.R.attr.alertDialogIcon);
-            mBuilder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    Intent newIntent = new Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS);
-                    newIntent.putExtra(Settings.EXTRA_SUB_ID,mPhone.getSubId());
-                    newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(newIntent);
-                }
-            });
-            mBuilder.setNegativeButton(android.R.string.cancel,
-                    new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                            finish();
-                        }
-            });
-            mBuilder.create().show();
-        }
     }
 
     // Since this method will be called once per get_call_barring response, compare with current
