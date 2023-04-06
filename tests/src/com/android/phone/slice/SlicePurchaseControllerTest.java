@@ -151,11 +151,11 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
         doReturn(CARRIER).when(mSlicePurchaseController).getSimOperator();
         replaceInstance(SlicePurchaseController.class, "sInstances", mSlicePurchaseController,
                 Map.of(PHONE_ID, mSlicePurchaseController));
-        replaceInstance(SlicePurchaseController.class, "mPremiumNetworkEntitlementApi",
-                mSlicePurchaseController, mPremiumNetworkEntitlementApi);
         replaceInstance(SlicePurchaseController.class, "mIsSlicingUpsellEnabled",
                 mSlicePurchaseController, true);
         mEntitlementResponse = new PremiumNetworkEntitlementResponse();
+        doReturn(mPremiumNetworkEntitlementApi).when(mSlicePurchaseController)
+                .getPremiumNetworkEntitlementApi();
         doReturn(mEntitlementResponse).when(mPremiumNetworkEntitlementApi)
                 .checkEntitlementStatus(anyInt());
     }
@@ -728,7 +728,8 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
                 mContext.getBroadcast().getAction());
         assertTrue(mSlicePurchaseController.hasMessages(4 /* EVENT_PURCHASE_TIMEOUT */,
                 TelephonyManager.PREMIUM_CAPABILITY_PRIORITIZE_LATENCY));
-        verify(mContext).registerReceiver(any(BroadcastReceiver.class), any(IntentFilter.class));
+        verify(mContext).registerReceiver(any(BroadcastReceiver.class), any(IntentFilter.class),
+                eq(Context.RECEIVER_NOT_EXPORTED));
     }
 
     private void sendNetworkSlicingConfig(int capability, boolean configActive) {
