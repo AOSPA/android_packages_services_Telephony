@@ -1538,7 +1538,9 @@ public class TelephonyConnectionService extends ConnectionService {
                     }
                     return resultConnection;
                 } else {
-                    if (mTelephonyManagerProxy.isConcurrentCallsPossible()) {
+                    if (mTelephonyManagerProxy.isConcurrentCallsPossible() &&
+                        !getApplicationContext().getResources()
+                        .getBoolean(com.android.internal.R.bool.config_disable_aosp_dsda_logic)) {
                         delayDialForOtherSubHold(phone, request.getAccountHandle(), (result) -> {
                             Log.d(this,
                                     "onCreateOutgoingConn - delayDialForOtherSubHold result = "
