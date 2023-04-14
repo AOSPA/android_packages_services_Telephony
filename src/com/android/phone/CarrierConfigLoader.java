@@ -64,7 +64,6 @@ import com.android.internal.telephony.IccCardConstants;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConfigurationManager;
 import com.android.internal.telephony.PhoneFactory;
-import com.android.internal.telephony.SubscriptionInfoUpdater;
 import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
 import com.android.internal.telephony.util.ArrayUtils;
@@ -129,8 +128,6 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
     // CarrierService change monitoring
     @NonNull private CarrierServiceChangeCallback[] mCarrierServiceChangeCallbacks;
 
-    // SubscriptionInfoUpdater
-    @NonNull private final SubscriptionInfoUpdater mSubscriptionInfoUpdater;
     // Whether the essential records have been loaded for each phone id.
     private boolean[] mIsEssentialSimRecordsLoaded;
     // Broadcast receiver for system events
@@ -142,7 +139,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
 
 
     // Message codes; see mHandler below.
-    // Request from SubscriptionInfoUpdater when SIM becomes absent or error.
+    // Request from UiccController when SIM becomes absent or error.
     private static final int EVENT_CLEAR_CONFIG = 0;
     // Has connected to default app.
     private static final int EVENT_CONNECTED_TO_DEFAULT = 3;
@@ -170,7 +167,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
     private static final int EVENT_FETCH_DEFAULT_TIMEOUT = 14;
     // Fetching config timed out from a carrier app.
     private static final int EVENT_FETCH_CARRIER_TIMEOUT = 15;
-    // SubscriptionInfoUpdater has finished updating the sub for the carrier config.
+    // SubscriptionManagerService has finished updating the sub for the carrier config.
     private static final int EVENT_SUBSCRIPTION_INFO_UPDATED = 16;
     // Multi-SIM config changed.
     private static final int EVENT_MULTI_SIM_CONFIG_CHANGED = 17;
@@ -701,9 +698,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
      * receiver for relevant events.
      */
     @VisibleForTesting
-    /* package */ CarrierConfigLoader(@NonNull Context context,
-            //TODO: Remove SubscriptionInfoUpdater.
-            @Nullable SubscriptionInfoUpdater subscriptionInfoUpdater, @NonNull Looper looper) {
+    /* package */ CarrierConfigLoader(@NonNull Context context, @NonNull Looper looper) {
         mContext = context;
         mPlatformCarrierConfigPackage =
                 mContext.getString(R.string.platform_carrier_config_package);
@@ -733,7 +728,6 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
                     new HandlerExecutor(mHandler), mCarrierServiceChangeCallbacks[phoneId]);
         }
         logd("CarrierConfigLoader has started");
-        mSubscriptionInfoUpdater = subscriptionInfoUpdater;
 
         PhoneConfigurationManager.registerForMultiSimConfigChange(
                 mHandler, EVENT_MULTI_SIM_CONFIG_CHANGED, null);
@@ -750,8 +744,7 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
     /* package */ static CarrierConfigLoader init(@NonNull Context context) {
         synchronized (CarrierConfigLoader.class) {
             if (sInstance == null) {
-                sInstance = new CarrierConfigLoader(context,
-                        PhoneFactory.getSubscriptionInfoUpdater(), Looper.myLooper());
+                sInstance = new CarrierConfigLoader(context, Looper.myLooper());
                 // Make this service available through ServiceManager.
                 TelephonyFrameworkInitializer.getTelephonyServiceManager()
                         .getCarrierConfigServiceRegisterer().register(sInstance);
@@ -816,16 +809,10 @@ public class CarrierConfigLoader extends ICarrierConfigLoader.Stub {
             configToSend.putAll(config);
         }
 
-        if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-            SubscriptionManagerService.getInstance().updateSubscriptionByCarrierConfig(
-                    phoneId, configPackageName, configToSend,
-                    () -> mHandler.obtainMessage(EVENT_SUBSCRIPTION_INFO_UPDATED, phoneId, -1)
-                            .sendToTarget());
-        } else {
-            mSubscriptionInfoUpdater.updateSubscriptionByCarrierConfigAndNotifyComplete(
-                    phoneId, configPackageName, configToSend,
-                    mHandler.obtainMessage(EVENT_SUBSCRIPTION_INFO_UPDATED, phoneId, -1));
-        }
+        SubscriptionManagerService.getInstance().updateSubscriptionByCarrierConfig(
+                phoneId, configPackageName, configToSend,
+                () -> mHandler.obtainMessage(EVENT_SUBSCRIPTION_INFO_UPDATED, phoneId, -1)
+                        .sendToTarget());
     }
 
     private void broadcastConfigChangedIntent(int phoneId) {
