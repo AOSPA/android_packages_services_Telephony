@@ -95,7 +95,7 @@ public class CiWlanNotificationReceiver extends BroadcastReceiver {
                 boolean show = intent.getBooleanExtra(C_IWLAN_NOTIFICATION_STATUS, false);
                 int phoneId = intent.getIntExtra(C_IWLAN_NOTIFICATION_PHONE_ID,
                         SubscriptionManager.INVALID_PHONE_INDEX);
-                if (SubscriptionManager.getSubscriptionId(phoneId) !=
+                if (show && SubscriptionManager.getSubscriptionId(phoneId) !=
                         SubscriptionManager.getDefaultDataSubscriptionId()) {
                     Log.d(TAG, "Notification not supported for nDDS, ignoring...");
                     return;

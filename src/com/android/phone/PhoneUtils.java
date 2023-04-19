@@ -765,7 +765,7 @@ public class PhoneUtils {
 
     public static PhoneAccountHandle makePstnPhoneAccountHandle(Phone phone) {
         return makePstnPhoneAccountHandleWithPrefix(phone, "",
-                false, phone.getUserHandle());
+                false, (phone != null) ? phone.getUserHandle() : null);
     }
 
     public static PhoneAccountHandle makePstnPhoneAccountHandleWithPrefix(

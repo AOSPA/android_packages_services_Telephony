@@ -21,6 +21,15 @@ import static junit.framework.Assert.assertTrue;
 
 import android.content.ComponentName;
 import android.telecom.PhoneAccountHandle;
+import android.test.mock.MockContext;
+
+import android.content.Context;
+import android.telephony.TelephonyManager;
+import static org.mockito.Mockito.doReturn;
+import org.mockito.MockitoAnnotations;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import androidx.test.runner.AndroidJUnit4;
 
@@ -34,10 +43,17 @@ public class HoldTrackerTest {
     private HoldTracker mHoldTrackerUT;
     private PhoneAccountHandle mPhoneAccountHandle1;
     private PhoneAccountHandle mPhoneAccountHandle2;
+    private Context mMockContext;
+    private TelephonyManager mTelephonyManager;
 
     @Before
     public void setUp() throws Exception {
-        mHoldTrackerUT = new HoldTracker();
+        mMockContext = mock(Context.class);
+        mTelephonyManager = mock(TelephonyManager.class);
+        when(mMockContext.getSystemService(eq(Context.TELEPHONY_SERVICE)))
+                         .thenReturn(mTelephonyManager);
+        mHoldTrackerUT = new HoldTracker(mMockContext);
+        doReturn(false).when(mTelephonyManager).isDsdaOrDsdsTransitionMode();
         mPhoneAccountHandle1 =
                 new PhoneAccountHandle(new ComponentName("pkg1", "cls1"), "0");
         mPhoneAccountHandle2 =
