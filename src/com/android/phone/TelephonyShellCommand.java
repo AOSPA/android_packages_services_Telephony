@@ -830,10 +830,7 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
     }
 
     private int toggleBackupCalling(boolean enable) {
-        int subId = getSubId(BACKUP_CALLING);
-        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-            subId = SubscriptionManager.getDefaultDataSubscriptionId();
-        }
+        int subId = getDataSubscriptionOrDefault(BACKUP_CALLING);
         ImsMmTelManager imsMmTelMgr = getImsMmTelManager(subId);
         if (imsMmTelMgr == null) {
             return -1;
@@ -1524,6 +1521,22 @@ public class TelephonyShellCommand extends BasicShellCommandHandler {
             slotId = DEFAULT_PHONE_ID;
         }
         return slotId;
+    }
+
+    private int getDataSubscriptionOrDefault(String cmd) {
+        int dds = SubscriptionManager.getDefaultDataSubscriptionId();
+        String opt = getNextOption();
+        if (opt != null && opt.equals("-s")) {
+            try {
+                int slotId = Integer.parseInt(getNextArgRequired());
+                return SubscriptionManager.getSubscriptionId(slotId);
+            } catch (NumberFormatException e) {
+                getErrPrintWriter().println(cmd + " requires an integer as a SLOT_ID.");
+                return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+            }
+        } else {
+            return dds;
+        }
     }
 
     // Parse options related to Carrier Config Commands.
