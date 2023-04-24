@@ -549,6 +549,14 @@ public class GsmUmtsCallBarringOptions extends TimeConsumingPreferenceActivity
         }
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        for (CallBarringEditPreference pref : mPreferences) {
+            pref.deInit();
+        }
+    }
+
     private void initCallBarring () {
         if (mFirstResume) {
             if (mIcicle == null || mIcicle.getBoolean(SAVED_BEFORE_LOAD_COMPLETED_KEY)) {
