@@ -82,18 +82,20 @@ public class AccountSelectionPreference extends ListPreference implements
         int i = 0;
         for ( ; i < mAccounts.length; i++) {
             PhoneAccount account = telecomManager.getPhoneAccount(mAccounts[i]);
-            CharSequence label = account.getLabel();
-            if (label != null) {
-                label = pm.getUserBadgedLabel(label, mAccounts[i].getUserHandle());
-            }
-            boolean isSimAccount =
+            if (account != null) {
+                CharSequence label = account.getLabel();
+                if (label != null) {
+                    label = pm.getUserBadgedLabel(label, mAccounts[i].getUserHandle());
+                }
+                boolean isSimAccount =
                     account.hasCapabilities(PhoneAccount.CAPABILITY_SIM_SUBSCRIPTION);
-            mEntries[i] = (TextUtils.isEmpty(label) && isSimAccount)
+                mEntries[i] = (TextUtils.isEmpty(label) && isSimAccount)
                     ? mContext.getString(R.string.phone_accounts_default_account_label)
                     : String.valueOf(label);
-            mEntryValues[i] = Integer.toString(i);
-            if (Objects.equals(currentSelection, mAccounts[i])) {
-                selectedIndex = i;
+                mEntryValues[i] = Integer.toString(i);
+                if (Objects.equals(currentSelection, mAccounts[i])) {
+                    selectedIndex = i;
+                }
             }
         }
         mEntryValues[i] = Integer.toString(i);

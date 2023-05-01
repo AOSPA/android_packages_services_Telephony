@@ -2002,7 +2002,6 @@
     <string name="srvcc_message">"4G voice call is downgraded to 2G/3G voice call due to 4G network is not available."</string>
     <string name="ut_not_support">UT is not available</string>
     <string name="ct_ut_not_support_close_4glte">UT is not available, please turn off Enhanced 4G LTE Mode in Settings</string>
-    <string name="switch_dds_to_sub_alert_msg">Please switch mobile data to SIM</string>
 
     <!-- In-call screen: error message shown when the user attempts to place a call, but the device
          is currently in the process of being provisioned for service.  Provisioning is the process
@@ -2202,13 +2201,17 @@
     <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
     <string name="radio_info_phone_number_label">Phone Number:</string>
     <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
-    <string name="radio_info_band_mode_label">Select Radio Band</string>
-    <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
     <string name="radio_info_voice_network_type_label">Voice Network Type:</string>
     <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
     <string name="radio_info_data_network_type_label">Data Network Type:</string>
     <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
     <string name="radio_info_override_network_type_label">Override Network Type:</string>
+    <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
+    <string name="radio_info_voice_raw_registration_state_label">Voice Raw Registration State:</string>
+    <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
+    <string name="radio_info_data_raw_registration_state_label">Data Raw Registration State:</string>
+    <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
+    <string name="radio_info_wlan_data_raw_registration_state_label">WLAN Data Raw Registration State:</string>
     <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->
     <string name="phone_index_label">Select phone index</string>
     <!-- Radio Info screen. Label for a status item.  Used for diagnostic info screens, precise translation isn't needed -->

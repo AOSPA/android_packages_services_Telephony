@@ -241,11 +241,6 @@ public class GsmUmtsCallForwardOptions extends TimeConsumingPreferenceActivity
             Log.d(LOG_TAG, "activeNetworkType = " + getActiveNetworkType() + ", sub = " + sub +
                     ", defaultDataSub = " + defaultDataSub + ", isDataRoaming = " +
                     isDataRoaming + ", isDataRoamingEnabled= " + isDataRoamingEnabled);
-            if ((sub != defaultDataSub) && !mPhone.isUtEnabled()) {
-                Log.d(LOG_TAG, "Show dds switch dialog if data sub is not on current sub");
-                showSwitchDdsDialog(slotId);
-                return;
-            }
 
             if (mPhone.isUtEnabled() && mCheckData) {
                 boolean isDataEnabled = TelephonyManager.from(this).getDataEnabled(sub);
@@ -385,37 +380,6 @@ public class GsmUmtsCallForwardOptions extends TimeConsumingPreferenceActivity
         String message = (String)this.getResources()
                 .getText(R.string.mobile_data_alert);
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
-
-    private void showSwitchDdsDialog(int slotId) {
-        String title = (String)this.getResources().getText(R.string.no_mobile_data);
-        int simId = slotId + 1;
-        String message = (String)this.getResources()
-                .getText(R.string.switch_dds_to_sub_alert) + String.valueOf(simId);
-        if (builder == null) {
-            builder=new AlertDialog.Builder(this);
-            builder.setTitle(title);
-            builder.setMessage(message);
-            builder.setIconAttribute(android.R.attr.alertDialogIcon);
-            builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    Intent newIntent = new Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS);
-                    newIntent.putExtra(Settings.EXTRA_SUB_ID,mPhone.getSubId());
-                    newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(newIntent);
-                }
-            });
-            builder.setNegativeButton(android.R.string.cancel,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                        finish();
-                    }
-            });
-            builder.create().show();
-        }
     }
 
     @Override

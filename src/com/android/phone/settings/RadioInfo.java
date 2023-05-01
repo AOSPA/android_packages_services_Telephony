@@ -210,12 +210,10 @@ public class RadioInfo extends AppCompatActivity {
         Log.d(TAG, s);
     }
 
-    private static final int EVENT_CFI_CHANGED = 302;
     private static final int EVENT_QUERY_SMSC_DONE = 1005;
     private static final int EVENT_UPDATE_SMSC_DONE = 1006;
     private static final int EVENT_PHYSICAL_CHANNEL_CONFIG_CHANGED = 1007;
 
-    private static final int MENU_ITEM_SELECT_BAND         = 0;
     private static final int MENU_ITEM_VIEW_ADN            = 1;
     private static final int MENU_ITEM_VIEW_FDN            = 2;
     private static final int MENU_ITEM_VIEW_SDN            = 3;
@@ -242,6 +240,9 @@ public class RadioInfo extends AppCompatActivity {
     private TextView mGprsState;
     private TextView mVoiceNetwork;
     private TextView mDataNetwork;
+    private TextView mVoiceRawReg;
+    private TextView mDataRawReg;
+    private TextView mWlanDataRawReg;
     private TextView mOverrideNetwork;
     private TextView mDBm;
     private TextView mMwi;
@@ -265,7 +266,6 @@ public class RadioInfo extends AppCompatActivity {
     private EditText mSmsc;
     private Switch mRadioPowerOnSwitch;
     private Switch mSimulateOutOfServiceSwitch;
-    private Button mCellInfoRefreshRateButton;
     private Button mDnsCheckToggleButton;
     private Button mPingTestButton;
     private Button mUpdateSmscButton;
@@ -384,6 +384,7 @@ public class RadioInfo extends AppCompatActivity {
             updateServiceState(serviceState);
             updateRadioPowerState();
             updateNetworkType();
+            updateRawRegistrationState(serviceState);
             updateImsProvisionedState();
             updateNrStats(serviceState);
         }
@@ -521,6 +522,9 @@ public class RadioInfo extends AppCompatActivity {
         mGprsState = (TextView) findViewById(R.id.gprs);
         mVoiceNetwork = (TextView) findViewById(R.id.voice_network);
         mDataNetwork = (TextView) findViewById(R.id.data_network);
+        mVoiceRawReg = (TextView) findViewById(R.id.voice_raw_registration_state);
+        mDataRawReg = (TextView) findViewById(R.id.data_raw_registration_state);
+        mWlanDataRawReg = (TextView) findViewById(R.id.wlan_data_raw_registration_state);
         mOverrideNetwork = (TextView) findViewById(R.id.override_network);
         mDBm = (TextView) findViewById(R.id.dbm);
         mMwi = (TextView) findViewById(R.id.mwi);
@@ -850,9 +854,7 @@ public class RadioInfo extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(0, MENU_ITEM_SELECT_BAND, 0, R.string.radio_info_band_mode_label)
-                .setOnMenuItemClickListener(mSelectBandCallback)
-                .setAlphabeticShortcut('b');
+        // Removed "select Radio band". If need it back, use setSystemSelectionChannels()
         menu.add(1, MENU_ITEM_VIEW_ADN, 0,
                 R.string.radioInfo_menu_viewADN).setOnMenuItemClickListener(mViewADNCallback);
         menu.add(1, MENU_ITEM_VIEW_FDN, 0,
@@ -920,8 +922,11 @@ public class RadioInfo extends AppCompatActivity {
         mOperatorName.setText("");
         mGprsState.setText("");
         mDataNetwork.setText("");
+        mDataRawReg.setText("");
         mOverrideNetwork.setText("");
         mVoiceNetwork.setText("");
+        mVoiceRawReg.setText("");
+        mWlanDataRawReg.setText("");
         mSent.setText("");
         mReceived.setText("");
         mCallState.setText("");
@@ -1269,6 +1274,32 @@ public class RadioInfo extends AppCompatActivity {
         }
     }
 
+    private String getRawRegistrationStateText(ServiceState ss, int domain, int transportType) {
+        if (ss != null) {
+            NetworkRegistrationInfo nri = ss.getNetworkRegistrationInfo(domain, transportType);
+            if (nri != null) {
+                return NetworkRegistrationInfo.registrationStateToString(
+                        nri.getNetworkRegistrationState())
+                        + (nri.isEmergencyEnabled() ? "_EM" : "");
+            }
+        }
+        return "";
+    }
+
+    private void updateRawRegistrationState(ServiceState serviceState) {
+        ServiceState ss = serviceState;
+        if (ss == null && mPhone != null) {
+            ss = mPhone.getServiceState();
+        }
+
+        mVoiceRawReg.setText(getRawRegistrationStateText(ss, NetworkRegistrationInfo.DOMAIN_CS,
+                    AccessNetworkConstants.TRANSPORT_TYPE_WWAN));
+        mDataRawReg.setText(getRawRegistrationStateText(ss, NetworkRegistrationInfo.DOMAIN_PS,
+                    AccessNetworkConstants.TRANSPORT_TYPE_WWAN));
+        mWlanDataRawReg.setText(getRawRegistrationStateText(ss, NetworkRegistrationInfo.DOMAIN_PS,
+                    AccessNetworkConstants.TRANSPORT_TYPE_WLAN));
+    }
+
     private void updateNrStats(ServiceState serviceState) {
         if ((mTelephonyManager.getSupportedRadioAccessFamily()
                 & TelephonyManager.NETWORK_TYPE_BITMASK_NR) == 0) {
@@ -1541,16 +1572,6 @@ public class RadioInfo extends AppCompatActivity {
 
             imsDialog.show();
 
-            return true;
-        }
-    };
-
-    private MenuItem.OnMenuItemClickListener mSelectBandCallback =
-            new MenuItem.OnMenuItemClickListener() {
-        public boolean onMenuItemClick(MenuItem item) {
-            Intent intent = new Intent();
-            intent.setClass(RadioInfo.this, BandMode.class);
-            startActivity(intent);
             return true;
         }
     };
