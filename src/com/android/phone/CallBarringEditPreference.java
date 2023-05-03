@@ -181,6 +181,14 @@ public class CallBarringEditPreference extends EditPinPreference {
         }
     }
 
+    public void deInit() {
+        if (mQtiImsExtConnector != null) {
+            mQtiImsExtConnector.disconnect();
+            mQtiImsExtConnector = null;
+            mQtiImsExtManager = null;
+        }
+    }
+
     void init(TimeConsumingPreferenceListener listener, boolean skipReading, Phone phone) {
         Log.d(LOG_TAG, "init: phone id = " + phone.getPhoneId());
         mPhone = phone;
