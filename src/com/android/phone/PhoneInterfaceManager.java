@@ -12498,7 +12498,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     /**
-     * Request to get the time after which the satellite will be visible
+     * Request to get the time after which the satellite will be visible.
      *
      * @param subId The subId to get the time after which the satellite will be visible for.
      * @param result The result receiver that returns the time after which the satellite will
@@ -12510,6 +12510,22 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     public void requestTimeForNextSatelliteVisibility(int subId, @NonNull ResultReceiver result) {
         enforceSatelliteCommunicationPermission("requestTimeForNextSatelliteVisibility");
         mSatelliteController.requestTimeForNextSatelliteVisibility(subId, result);
+    }
+
+    /**
+     * Inform that Device is aligned to satellite for demo mode.
+     *
+     * @param subId The subId to get the time after which the satellite will be visible for.
+     * @param isAligned {@code true} Device is aligned with the satellite for demo mode
+     *                  {@code false} Device fails to align with the satellite for demo mode.
+     *
+     * @throws SecurityException if the caller doesn't have required permission.
+     */
+    @RequiresPermission(Manifest.permission.SATELLITE_COMMUNICATION)
+
+    public void onDeviceAlignedWithSatellite(int subId, @NonNull boolean isAligned) {
+        enforceSatelliteCommunicationPermission("informDeviceAlignedToSatellite");
+        mSatelliteController.onDeviceAlignedWithSatellite(subId, isAligned);
     }
 
     /**
@@ -12547,6 +12563,26 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     /**
+     * This API can be used by only CTS to update satellite pointing UI app package and class names.
+     *
+     * @param packageName The package name of the satellite pointing UI app.
+     * @param className The class name of the satellite pointing UI app.
+     * @return {@code true} if the satellite pointing UI app package and class is set successfully,
+     * {@code false} otherwise.
+     */
+    public boolean setSatellitePointingUiClassName(
+            @Nullable String packageName, @Nullable String className) {
+        Log.d(LOG_TAG, "setSatellitePointingUiClassName: packageName=" + packageName
+                + ", className=" + className);
+        TelephonyPermissions.enforceShellOnly(
+                Binder.getCallingUid(), "setSatellitePointingUiClassName");
+        TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID,
+                "setSatelliteGatewayServicePackageName");
+        return mSatelliteController.setSatellitePointingUiClassName(packageName, className);
+    }
+
+    /**
      * This API can be used by only CTS to update the timeout duration in milliseconds that
      * satellite should stay at listening mode to wait for the next incoming page before disabling
      * listening mode.
@@ -12562,6 +12598,23 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                 SubscriptionManager.INVALID_SUBSCRIPTION_ID,
                 "setSatelliteListeningTimeoutDuration");
         return mSatelliteController.setSatelliteListeningTimeoutDuration(timeoutMillis);
+    }
+
+    /**
+     * This API can be used by only CTS to update the timeout duration in milliseconds whether
+     * the device is aligned with the satellite for demo mode
+     *
+     * @param timeoutMillis The timeout duration in millisecond.
+     * @return {@code true} if the timeout duration is set successfully, {@code false} otherwise.
+     */
+    public boolean setSatelliteDeviceAlignedTimeoutDuration(long timeoutMillis) {
+        Log.d(LOG_TAG, "setDeviceAlignedTimeoutDuration - " + timeoutMillis);
+        TelephonyPermissions.enforceShellOnly(
+                Binder.getCallingUid(), "setDeviceAlignedTimeoutDuration");
+        TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID,
+                "setDeviceAlignedTimeoutDuration");
+        return mSatelliteController.setSatelliteDeviceAlignedTimeoutDuration(timeoutMillis);
     }
 
     /**
