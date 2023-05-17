@@ -204,9 +204,9 @@ public class TelephonyConnectionService extends ConnectionService {
                 if (ringingConnection != null) {
                     maybeIndicateAnsweringWillDisconnect((TelephonyConnection)ringingConnection,
                             ringingConnection.getPhoneAccountHandle());
+                    maybeRemoveAnsweringDropsFgCallExtra((TelephonyConnection)ringingConnection,
+                            ringingConnection.getPhoneAccountHandle());
                 }
-                // TODO: Handle pseudo DSDA-> DSDA transition
-
                 // recalculate conferenceable connections
                 mImsConferenceController.recalculateConferenceable();
             }
@@ -4593,6 +4593,81 @@ public class TelephonyConnectionService extends ConnectionService {
             extras.putBoolean(Connection.EXTRA_ANSWERING_DROPS_FG_CALL, true);
             connection.putExtras(extras);
         }
+    }
+
+    private void maybeRemoveAnsweringDropsFgCallExtra(TelephonyConnection ringingConnection,
+            PhoneAccountHandle phoneAccountHandle) {
+        if (!isDsdaOrDsdsTransitionMode()) {
+            return;
+        }
+
+        if (ringingConnection == null || phoneAccountHandle == null) {
+            return;
+        }
+
+        // If ringing connection is not IMS then no need to remove extra
+        // Connection.EXTRA_ANSWERING_DROPS_FG_CALL as after accepting the incoming CS call existing
+        // calls on other sub needs to be disconnected.
+        if (!ringingConnection.isImsConnection()) {
+            Log.v(this, "maybeRemoveAnsweringDropsFgCallExtra non IMS ringing connection");
+            return;
+        }
+
+        // If CS calls present on other subscription then no need to remove extra
+        // Connection.EXTRA_ANSWERING_DROPS_FG_CALL as after accepting the incoming IMS call
+        // existing calls on other sub needs to be disconnected.
+        if (isNonImsCallPresentOnOtherSub(phoneAccountHandle)) {
+            Log.v(this, "maybeRemoveAnsweringDropsFgCallExtra non IMS call on other sub");
+            return;
+        }
+
+        Phone ringingPhone = ringingConnection.getPhone();
+        if (ringingPhone == null) {
+            return;
+        }
+
+        // Video calls present on other subscription and video call hold is not supported then no
+        // need to remove extra Connection.EXTRA_ANSWERING_DROPS_FG_CALL as Video call needs to be
+        // disconnected once MT call is accepted.
+        if (hasConnectedVideoCallOnOtherSub(phoneAccountHandle) &&
+                !isVideoCallHoldAllowedOnOtherSub(ringingPhone)) {
+            return;
+        }
+
+        // Check Connection.EXTRA_ANSWERING_DROPS_FG_CALL is true if not return.
+        Bundle connExtras = ringingConnection.getExtras();
+        if (connExtras == null) {
+            return;
+        }
+
+        if (!connExtras.getBoolean(Connection.EXTRA_ANSWERING_DROPS_FG_CALL, false)) {
+            return;
+        }
+
+        /*
+         * In DSDA or DSDS transition mode, if Connection.EXTRA_ANSWERING_DROPS_FG_CALL is present
+         * due to device previously in pseudo DSDA mode, remove this extra to allow answering
+         * incoming call by HOLDING existing call on other SUB.
+         */
+        Log.i(this, "maybeRemoveAnsweringDropsFgCallExtra remove extra in ringing connection");
+        ringingConnection.removeExtras(Connection.EXTRA_ANSWERING_DROPS_FG_CALL);
+    }
+
+    /**
+     * Checks to see if there are non ims calls present on a sub other than the one passed in.
+     * @param incomingHandle The new incoming connection {@link PhoneAccountHandle}
+     */
+    private boolean isNonImsCallPresentOnOtherSub(@NonNull PhoneAccountHandle incomingHandle) {
+        for (Connection c : getAllConnections()) {
+            if (c instanceof TelephonyConnection &&
+                    !Objects.equals(c.getPhoneAccountHandle(), incomingHandle) &&
+                    (c.getConnectionProperties() & Connection.PROPERTY_IS_EXTERNAL_CALL) == 0 &&
+                    (c.getState() == Connection.STATE_ACTIVE ||
+                     c.getState() == Connection.STATE_HOLDING)) {
+                return !((TelephonyConnection)c).isImsConnection();
+            }
+        }
+        return false;
     }
 
     /**
