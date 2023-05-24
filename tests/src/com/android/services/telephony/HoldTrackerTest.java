@@ -19,8 +19,6 @@ package com.android.services.telephony;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
-import android.content.ComponentName;
-import android.telecom.PhoneAccountHandle;
 import android.test.mock.MockContext;
 
 import android.content.Context;
@@ -41,8 +39,6 @@ import org.junit.runner.RunWith;
 public class HoldTrackerTest {
 
     private HoldTracker mHoldTrackerUT;
-    private PhoneAccountHandle mPhoneAccountHandle1;
-    private PhoneAccountHandle mPhoneAccountHandle2;
     private Context mMockContext;
     private TelephonyManager mTelephonyManager;
 
@@ -54,66 +50,49 @@ public class HoldTrackerTest {
                          .thenReturn(mTelephonyManager);
         mHoldTrackerUT = new HoldTracker(mMockContext);
         doReturn(false).when(mTelephonyManager).isDsdaOrDsdsTransitionMode();
-        mPhoneAccountHandle1 =
-                new PhoneAccountHandle(new ComponentName("pkg1", "cls1"), "0");
-        mPhoneAccountHandle2 =
-                new PhoneAccountHandle(new ComponentName("pkg2", "cls2"), "1");
     }
 
     @Test
     public void oneTopHoldableCanBeHeld() {
         FakeHoldable topHoldable = createHoldable(false);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, topHoldable);
+        mHoldTrackerUT.addHoldable(topHoldable);
 
         assertTrue(topHoldable.canBeHeld());
     }
 
     @Test
-    public void childHoldableCanNotBeHeld() {
+    public void childHoldableCannotBeHeld() {
         FakeHoldable topHoldable = createHoldable(false);
         FakeHoldable childHoldable = createHoldable(true);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, topHoldable);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, childHoldable);
+        mHoldTrackerUT.addHoldable(topHoldable);
+        mHoldTrackerUT.addHoldable(childHoldable);
 
         assertTrue(topHoldable.canBeHeld());
         assertFalse(childHoldable.canBeHeld());
     }
 
     @Test
-    public void twoTopHoldableWithTheSamePhoneAccountCanNotBeHeld() {
+    public void twoTopHoldablesCannotBeHeld() {
         FakeHoldable topHoldable1 = createHoldable(false);
         FakeHoldable topHoldable2 = createHoldable(false);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, topHoldable1);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, topHoldable2);
+        mHoldTrackerUT.addHoldable(topHoldable1);
+        mHoldTrackerUT.addHoldable(topHoldable2);
 
-        mHoldTrackerUT.updateHoldCapability(mPhoneAccountHandle1);
+        mHoldTrackerUT.updateHoldCapability();
         assertFalse(topHoldable1.canBeHeld());
         assertFalse(topHoldable2.canBeHeld());
-    }
-
-    @Test
-    public void holdableWithDifferentPhoneAccountDoesNotAffectEachOther() {
-        FakeHoldable topHoldable1 = createHoldable(false);
-        FakeHoldable topHoldable2 = createHoldable(false);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, topHoldable1);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle2, topHoldable2);
-
-        // Both phones account have only one top holdable, so the holdable of each phone account can
-        // be held.
-        assertTrue(topHoldable1.canBeHeld());
-        assertTrue(topHoldable2.canBeHeld());
     }
 
     @Test
     public void removeOneTopHoldableAndUpdateHoldCapabilityCorrectly() {
         FakeHoldable topHoldable1 = createHoldable(false);
         FakeHoldable topHoldable2 = createHoldable(false);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, topHoldable1);
-        mHoldTrackerUT.addHoldable(mPhoneAccountHandle1, topHoldable2);
+        mHoldTrackerUT.addHoldable(topHoldable1);
+        mHoldTrackerUT.addHoldable(topHoldable2);
         assertFalse(topHoldable1.canBeHeld());
         assertFalse(topHoldable2.canBeHeld());
 
-        mHoldTrackerUT.removeHoldable(mPhoneAccountHandle1, topHoldable1);
+        mHoldTrackerUT.removeHoldable(topHoldable1);
         assertTrue(topHoldable2.canBeHeld());
     }
 

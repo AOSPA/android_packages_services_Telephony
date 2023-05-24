@@ -557,8 +557,7 @@
     <string name="incall_error_supp_service_hold" msgid="8535056414643540997">"Не може да се задржат повици."</string>
     <string name="incall_error_wfc_only_no_wireless_network" msgid="5860742792811400109">"Поврзете се на безжична мрежа за да повикате."</string>
     <string name="incall_error_promote_wfc" msgid="9164896813931363415">"Овозможете повикување преку Wi-Fi за воспоставување повик."</string>
-    <!-- no translation found for incall_error_satellite_enabled (1936541518147323016) -->
-    <skip />
+    <string name="incall_error_satellite_enabled" msgid="1936541518147323016">"Исклучете го режимот на сателит за да упатите повик."</string>
     <string name="emergency_information_hint" msgid="9208897544917793012">"Податоци за итни случаи"</string>
     <string name="emergency_information_owner_hint" msgid="6256909888049185316">"Сопственик"</string>
     <string name="emergency_information_confirm_hint" msgid="5109017615894918914">"Допрете повторно за приказ на информации"</string>
@@ -599,7 +598,7 @@
     <string name="hac_mode_summary" msgid="7774989500136009881">"Вклучи компатибилност на слушни помагала"</string>
     <string name="rtt_mode_title" msgid="3075948111362818043">"Повик со „Текст во реално време“ (RTT)"</string>
     <string name="rtt_mode_summary" msgid="8631541375609989562">"Дозволете пораки во текот на гласовен повик"</string>
-    <string name="rtt_mode_more_information" msgid="587500128658756318">"Функцијата RTT им помага на повикувачи коишто се глуви, слабо слушаат, имаат говорна мана или пак, им е потребно многу повеќе од глас.&lt;br&gt; &lt;a href=<xliff:g id="URL">http://support.google.com/mobile?p=telephony_rtt</xliff:g>&gt;Дознајте повеќе&lt;/a&gt;\n       &lt;br&gt;&lt;br&gt; - Повиците со RTT се зачувуваат како препис на порака\n       &lt;br&gt; - Функцијата RTT не е достапна за видеоповици"</string>
+    <string name="rtt_mode_more_information" msgid="587500128658756318">"RTT им помага на корисниците коишто се глуви, наглуви, имаат попреченост во говорот или пак, не им е доволен само глас.&lt;br&gt; &lt;a href=<xliff:g id="URL">http://support.google.com/mobile?p=telephony_rtt</xliff:g>&gt;Дознајте повеќе&lt;/a&gt;\n       &lt;br&gt;&lt;br&gt; - RTT-повиците се зачувуваат како транскрипции на пораки\n       &lt;br&gt; - Функцијата RTT не е достапна за видеоповици"</string>
     <string name="no_rtt_when_roaming" msgid="5268008247378355389">"Напомена: RTT не е достапна во роаминг"</string>
   <string-array name="tty_mode_entries">
     <item msgid="3238070884803849303">"TTY исклучени"</item>
@@ -716,8 +715,7 @@
     <string name="clh_callFailed_powerOff_txt" msgid="8279934912560765361">"Авионскиот режим е вклучен"</string>
     <string name="clh_callFailed_simError_txt" msgid="5128538525762326413">"Не може да се пристапи до SIM-картичката"</string>
     <string name="clh_incall_error_out_of_service_txt" msgid="2736010617446749869">"Мобилната мрежа не е достапна"</string>
-    <!-- no translation found for clh_callFailed_satelliteEnabled_txt (1675517238240377396) -->
-    <skip />
+    <string name="clh_callFailed_satelliteEnabled_txt" msgid="1675517238240377396">"Режимот на сателит е вклучен"</string>
     <string name="clh_callFailed_unassigned_number_txt" msgid="141967660286695682">"Проблем со телефонскиот број што се обидувате да го бирате. Код за грешка: 1."</string>
     <string name="clh_callFailed_no_route_to_destination_txt" msgid="4805015149822352308">"Повикот не може да се заврши. Код за грешка: 3."</string>
     <string name="clh_callFailed_channel_unacceptable_txt" msgid="4062754579408613021">"Повикот не може да се заврши. Код за грешка: 6."</string>
