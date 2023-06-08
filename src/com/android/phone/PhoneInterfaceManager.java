@@ -39,6 +39,7 @@ import android.app.compat.CompatChanges;
 import android.app.role.RoleManager;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -2242,7 +2243,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                         arg.callback.accept(result);
                         log("purchasePremiumCapability: capability="
                                 + TelephonyManager.convertPremiumCapabilityToString(arg.capability)
-                                + ", result= "
+                                + ", result="
                                 + TelephonyManager.convertPurchaseResultToString(result));
                     } catch (RemoteException e) {
                         String logStr = "Purchase premium capability "
@@ -8733,6 +8734,13 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
     }
 
+    @Override
+    public List<String> getShaIdFromAllowList(String pkgName, int carrierId) {
+        enforceReadPrivilegedPermission("checkCarrierRestrictionFileForNoChange");
+        CarrierAllowListInfo allowListInfo = CarrierAllowListInfo.loadInstance(mApp);
+        return allowListInfo.getShaIdList(pkgName, carrierId);
+    }
+
     @VisibleForTesting
     public int validateCallerAndGetCarrierId(String packageName) {
         CarrierAllowListInfo allowListInfo = CarrierAllowListInfo.loadInstance(mApp);
@@ -10282,11 +10290,21 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     @Override
     public void showSwitchToManagedProfileDialog() {
         enforceModifyPermission();
-
-        Intent intent = new Intent();
-        intent.setClass(mApp, ErrorDialogActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        mApp.startActivity(intent);
+        try {
+            // Note: This intent is constructed to ensure that the IntentForwarderActivity is
+            // shown in accordance with the intent filters in DefaultCrossProfileIntentFilterUtils
+            // for work telephony.
+            Intent intent = new Intent(Intent.ACTION_SENDTO);
+            intent.setData(Uri.parse("smsto:"));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mApp.startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            Log.w(LOG_TAG, "Unable to show intent forwarder, try showing error dialog instead");
+            Intent intent = new Intent();
+            intent.setClass(mApp, ErrorDialogActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mApp.startActivity(intent);
+        }
     }
 
     @Override
@@ -11697,7 +11715,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
             if (processes != null) {
                 for (ActivityManager.RunningAppProcessInfo process : processes) {
                     log("purchasePremiumCapability: process " + process.processName
-                            + "has importance " + process.importance);
+                            + " has importance " + process.importance);
                     if (process.processName.equals(callingProcess) && process.importance
                             <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) {
                         isVisible = true;
@@ -12498,7 +12516,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     /**
-     * Request to get the time after which the satellite will be visible
+     * Request to get the time after which the satellite will be visible.
      *
      * @param subId The subId to get the time after which the satellite will be visible for.
      * @param result The result receiver that returns the time after which the satellite will
@@ -12510,6 +12528,22 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     public void requestTimeForNextSatelliteVisibility(int subId, @NonNull ResultReceiver result) {
         enforceSatelliteCommunicationPermission("requestTimeForNextSatelliteVisibility");
         mSatelliteController.requestTimeForNextSatelliteVisibility(subId, result);
+    }
+
+    /**
+     * Inform that Device is aligned to satellite for demo mode.
+     *
+     * @param subId The subId to get the time after which the satellite will be visible for.
+     * @param isAligned {@code true} Device is aligned with the satellite for demo mode
+     *                  {@code false} Device fails to align with the satellite for demo mode.
+     *
+     * @throws SecurityException if the caller doesn't have required permission.
+     */
+    @RequiresPermission(Manifest.permission.SATELLITE_COMMUNICATION)
+
+    public void onDeviceAlignedWithSatellite(int subId, @NonNull boolean isAligned) {
+        enforceSatelliteCommunicationPermission("informDeviceAlignedToSatellite");
+        mSatelliteController.onDeviceAlignedWithSatellite(subId, isAligned);
     }
 
     /**
@@ -12547,6 +12581,26 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     /**
+     * This API can be used by only CTS to update satellite pointing UI app package and class names.
+     *
+     * @param packageName The package name of the satellite pointing UI app.
+     * @param className The class name of the satellite pointing UI app.
+     * @return {@code true} if the satellite pointing UI app package and class is set successfully,
+     * {@code false} otherwise.
+     */
+    public boolean setSatellitePointingUiClassName(
+            @Nullable String packageName, @Nullable String className) {
+        Log.d(LOG_TAG, "setSatellitePointingUiClassName: packageName=" + packageName
+                + ", className=" + className);
+        TelephonyPermissions.enforceShellOnly(
+                Binder.getCallingUid(), "setSatellitePointingUiClassName");
+        TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID,
+                "setSatelliteGatewayServicePackageName");
+        return mSatelliteController.setSatellitePointingUiClassName(packageName, className);
+    }
+
+    /**
      * This API can be used by only CTS to update the timeout duration in milliseconds that
      * satellite should stay at listening mode to wait for the next incoming page before disabling
      * listening mode.
@@ -12562,6 +12616,23 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                 SubscriptionManager.INVALID_SUBSCRIPTION_ID,
                 "setSatelliteListeningTimeoutDuration");
         return mSatelliteController.setSatelliteListeningTimeoutDuration(timeoutMillis);
+    }
+
+    /**
+     * This API can be used by only CTS to update the timeout duration in milliseconds whether
+     * the device is aligned with the satellite for demo mode
+     *
+     * @param timeoutMillis The timeout duration in millisecond.
+     * @return {@code true} if the timeout duration is set successfully, {@code false} otherwise.
+     */
+    public boolean setSatelliteDeviceAlignedTimeoutDuration(long timeoutMillis) {
+        Log.d(LOG_TAG, "setDeviceAlignedTimeoutDuration - " + timeoutMillis);
+        TelephonyPermissions.enforceShellOnly(
+                Binder.getCallingUid(), "setDeviceAlignedTimeoutDuration");
+        TelephonyPermissions.enforceCallingOrSelfModifyPermissionOrCarrierPrivilege(mApp,
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID,
+                "setDeviceAlignedTimeoutDuration");
+        return mSatelliteController.setSatelliteDeviceAlignedTimeoutDuration(timeoutMillis);
     }
 
     /**

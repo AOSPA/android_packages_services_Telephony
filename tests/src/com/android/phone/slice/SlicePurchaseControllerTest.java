@@ -57,6 +57,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import com.android.TelephonyTestBase;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.Phone;
+import com.android.internal.telephony.data.DataSettingsManager;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -88,6 +89,7 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
     @Mock CarrierConfigManager mCarrierConfigManager;
     @Mock CommandsInterface mCommandsInterface;
     @Mock ServiceState mServiceState;
+    @Mock DataSettingsManager mDataSettingsManager;
     @Mock PremiumNetworkEntitlementApi mPremiumNetworkEntitlementApi;
     @Mock SharedPreferences mSharedPreferences;
     @Mock SharedPreferences.Editor mEditor;
@@ -116,6 +118,7 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
         doReturn(PHONE_ID).when(mPhone).getPhoneId();
         doReturn(mContext).when(mPhone).getContext();
         doReturn(mServiceState).when(mPhone).getServiceState();
+        doReturn(mDataSettingsManager).when(mPhone).getDataSettingsManager();
         mPhone.mCi = mCommandsInterface;
 
         doReturn(mCarrierConfigManager).when(mContext)
@@ -357,6 +360,7 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
 
         // retry with valid network
         doReturn(TelephonyManager.NETWORK_TYPE_NR).when(mServiceState).getDataNetworkType();
+        doReturn(true).when(mDataSettingsManager).isDataEnabledForReason(anyInt());
 
         mSlicePurchaseController.purchasePremiumCapability(
                 TelephonyManager.PREMIUM_CAPABILITY_PRIORITIZE_LATENCY, mHandler.obtainMessage());
@@ -375,15 +379,17 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
                 SlicePurchaseController.SLICE_PURCHASE_TEST_FILE);
         doReturn(SubscriptionManager.getDefaultDataSubscriptionId()).when(mPhone).getSubId();
         doReturn(TelephonyManager.NETWORK_TYPE_NR).when(mServiceState).getDataNetworkType();
+        doReturn(true).when(mDataSettingsManager).isDataEnabledForReason(anyInt());
         doReturn(null).when(mPremiumNetworkEntitlementApi).checkEntitlementStatus(anyInt());
 
         mSlicePurchaseController.purchasePremiumCapability(
                 TelephonyManager.PREMIUM_CAPABILITY_PRIORITIZE_LATENCY, mHandler.obtainMessage());
         mTestableLooper.processAllMessages();
-        assertEquals(TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_ENTITLEMENT_CHECK_FAILED,
-                mResult);
+        assertEquals(TelephonyManager.PURCHASE_PREMIUM_CAPABILITY_RESULT_CARRIER_ERROR, mResult);
 
         // retry with provisioned response
+        mEntitlementResponse.mEntitlementStatus =
+                PremiumNetworkEntitlementResponse.PREMIUM_NETWORK_ENTITLEMENT_STATUS_INCLUDED;
         mEntitlementResponse.mProvisionStatus =
                 PremiumNetworkEntitlementResponse.PREMIUM_NETWORK_PROVISION_STATUS_PROVISIONED;
         doReturn(mEntitlementResponse).when(mPremiumNetworkEntitlementApi)
@@ -396,6 +402,8 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
                 mResult);
 
         // retry with provisioning response
+        mEntitlementResponse.mEntitlementStatus =
+                PremiumNetworkEntitlementResponse.PREMIUM_NETWORK_ENTITLEMENT_STATUS_PROVISIONING;
         mEntitlementResponse.mProvisionStatus =
                 PremiumNetworkEntitlementResponse.PREMIUM_NETWORK_PROVISION_STATUS_IN_PROGRESS;
 
@@ -713,9 +721,12 @@ public class SlicePurchaseControllerTest extends TelephonyTestBase {
         doReturn(SubscriptionManager.getDefaultDataSubscriptionId()).when(mPhone).getSubId();
         // network available
         doReturn(TelephonyManager.NETWORK_TYPE_NR).when(mServiceState).getDataNetworkType();
+        doReturn(true).when(mDataSettingsManager).isDataEnabledForReason(anyInt());
         // entitlement check passed
         mEntitlementResponse.mEntitlementStatus =
-                PremiumNetworkEntitlementResponse.PREMIUM_NETWORK_ENTITLEMENT_STATUS_DISABLED;
+                PremiumNetworkEntitlementResponse.PREMIUM_NETWORK_ENTITLEMENT_STATUS_ENABLED;
+        mEntitlementResponse.mProvisionStatus =
+                PremiumNetworkEntitlementResponse.PREMIUM_NETWORK_PROVISION_STATUS_PROVISIONED;
 
         // send purchase request
         mSlicePurchaseController.purchasePremiumCapability(
