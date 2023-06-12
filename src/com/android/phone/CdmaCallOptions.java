@@ -47,7 +47,6 @@ import android.view.MenuItem;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.SubscriptionController;
 
 import java.util.List;
 
