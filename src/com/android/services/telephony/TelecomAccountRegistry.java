@@ -1058,7 +1058,9 @@ public class TelecomAccountRegistry {
 
             boolean isRoaming = mTelephonyManager.isNetworkRoaming(mPhone.getSubId());
             boolean isOnWfc = mPhone.getImsRegistrationTech()
-                    == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN;
+                    == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN
+                    ||  mPhone.getImsRegistrationTech()
+                    == ImsRegistrationImplBase.REGISTRATION_TECH_CROSS_SIM;
             boolean alwaysAllowWhileRoaming = isCarrierAllowRttWhenRoaming();
 
             boolean shouldDisableBecauseRoamingOffWfc =
