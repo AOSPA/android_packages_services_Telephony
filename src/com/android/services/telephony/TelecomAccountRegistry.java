@@ -1904,13 +1904,12 @@ public class TelecomAccountRegistry {
 
     private boolean isSubIdCreationPending() {
         Log.i(this, "isSubIdCreationPending");
-        SubscriptionController subController = SubscriptionController.getInstance();
 
-        if (subController == null) {
-            Log.i(this, "isSubIdCreationPending: SubscriptionController instance is null");
+        if (SubscriptionManagerService.getInstance() == null) {
+            Log.i(this, "isSubIdCreationPending: SMVC instance is null");
             return false;
         }
-        return subController.isSubIdCreationPending();
+        return SubscriptionManagerService.getInstance().isSubIdCreationPending();
     }
 
     private boolean areAllSimAccountsFound() {

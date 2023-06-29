@@ -97,9 +97,7 @@ public class CallBarringEditPreference extends EditPinPreference {
     private Client mClient;
     private QtiImsExtConnector mQtiImsExtConnector;
     private QtiImsExtManager mQtiImsExtManager;
-    // Flag determines whether set call barring request was sent over IMS
-    private boolean mImsSetCallBarringRequest = false;
-
+    private SetCallBarringReqInfo mSetCallBarringReqInfo = new SetCallBarringReqInfo(false, null);
     private static final int PW_LENGTH = 4;
 
     /**
@@ -246,10 +244,6 @@ public class CallBarringEditPreference extends EditPinPreference {
                     "Exception = " + e);
             sendErrorResponse();
         }
-    }
-
-    void setImsSetCallBarringRequest(boolean status) {
-        mImsSetCallBarringRequest = status;
     }
 
     private void sendErrorResponse() {
@@ -505,10 +499,11 @@ public class CallBarringEditPreference extends EditPinPreference {
 
             AsyncResult ar = (AsyncResult) msg.obj;
 
-            if (msg.arg2 == MESSAGE_SET_CALL_BARRING || pref.mImsSetCallBarringRequest) {
+            if (msg.arg2 == MESSAGE_SET_CALL_BARRING ||
+                    pref.mSetCallBarringReqInfo.mIsRequestOverIms) {
                 // This block is triggered when GET_CALL_BARRING request that caused this response
                 // is because of the user setting call barring option on UI
-                pref.setImsSetCallBarringRequest(false);
+                pref.mSetCallBarringReqInfo.mIsRequestOverIms = false;
                 pref.mTcpListener.onFinished(pref, false);
             } else {
                 pref.mTcpListener.onFinished(pref, true);
@@ -519,7 +514,9 @@ public class CallBarringEditPreference extends EditPinPreference {
                 Log.i(LOG_TAG, "handleGetCallBarringResponse: ar.exception=" + ar.exception);
                 pref.mTcpListener.onException(pref, (CommandException) ar.exception);
             } else {
-                if (ar.userObj instanceof Throwable) {
+                if (pref.mSetCallBarringReqInfo.mException != null ||
+                        ar.userObj instanceof Throwable) {
+                    pref.mSetCallBarringReqInfo.mException = null;
                     pref.mTcpListener.onError(pref, RESPONSE_ERROR);
                 }
                 int[] ints = (int[]) ar.result;
@@ -564,9 +561,22 @@ public class CallBarringEditPreference extends EditPinPreference {
                         obtainMessage(MESSAGE_GET_CALL_BARRING, 0, MESSAGE_SET_CALL_BARRING,
                                 ar.exception), getServiceClassForCallBarring(pref.mPhone));
             } else {
-                pref.setImsSetCallBarringRequest(true);
+                pref.mSetCallBarringReqInfo.mIsRequestOverIms = true;
+                pref.mSetCallBarringReqInfo.mException = ar.exception;
                 pref.queryImsCallBarringStatus();
             }
+        }
+    }
+
+    private class SetCallBarringReqInfo{
+        // Flag determines whether set call barring request was sent over IMS
+        private boolean mIsRequestOverIms;
+        // Exception occurred in setting call barring
+        private Throwable mException;
+
+        private SetCallBarringReqInfo(boolean isRequestOverIms, Throwable exception) {
+            mIsRequestOverIms = isRequestOverIms;
+            mException = exception;
         }
     }
 }
