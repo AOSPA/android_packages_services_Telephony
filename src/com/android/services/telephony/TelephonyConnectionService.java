@@ -990,7 +990,7 @@ public class TelephonyConnectionService extends ConnectionService {
             new TelephonyConferenceBase.TelephonyConferenceListener() {
         @Override
         public void onConferenceMembershipChanged(Connection connection) {
-            mHoldTracker.updateHoldCapability();
+            mHoldTracker.updateHoldCapability(connection.getPhoneAccountHandle());
         }
     };
 
@@ -2616,28 +2616,29 @@ public class TelephonyConnectionService extends ConnectionService {
     @Override
     public void onConnectionAdded(Connection connection) {
         if (connection instanceof Holdable && !isExternalConnection(connection)) {
-            mHoldTracker.addHoldable((Holdable) connection);
+            mHoldTracker.addHoldable(
+                    connection.getPhoneAccountHandle(), (Holdable) connection);
         }
     }
 
     @Override
     public void onConnectionRemoved(Connection connection) {
         if (connection instanceof Holdable && !isExternalConnection(connection)) {
-            mHoldTracker.removeHoldable((Holdable) connection);
+            mHoldTracker.removeHoldable(connection.getPhoneAccountHandle(), (Holdable) connection);
         }
     }
 
     @Override
     public void onConferenceAdded(Conference conference) {
         if (conference instanceof Holdable) {
-            mHoldTracker.addHoldable((Holdable) conference);
+            mHoldTracker.addHoldable(conference.getPhoneAccountHandle(), (Holdable) conference);
         }
     }
 
     @Override
     public void onConferenceRemoved(Conference conference) {
         if (conference instanceof Holdable) {
-            mHoldTracker.removeHoldable((Holdable) conference);
+            mHoldTracker.removeHoldable(conference.getPhoneAccountHandle(), (Holdable) conference);
         }
     }
 
