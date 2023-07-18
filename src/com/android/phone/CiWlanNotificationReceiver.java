@@ -144,7 +144,7 @@ public class CiWlanNotificationReceiver extends BroadcastReceiver {
         ciwlanIntent.putExtra(Settings.EXTRA_SUB_ID,
                 SubscriptionManager.getSubscriptionId(phoneId));
         PendingIntent pendingIntent = PendingIntent.getActivity(context, phoneId, ciwlanIntent,
-                PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Action ciwlanSettingAction = new NotificationCompat.Action.Builder(0,
                 resources.getString(R.string.c_iwlan_exit_notification_positive_button),
                 pendingIntent).build();
@@ -159,7 +159,7 @@ public class CiWlanNotificationReceiver extends BroadcastReceiver {
         // between the pending intents for the different subs. If we pass the same number for this
         // parameter, the extras for the latest pending intent will override the previous one.
         pendingIntent = PendingIntent.getBroadcast(context, phoneId, dismissIntent,
-                PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Action dismissAction = new NotificationCompat.Action.Builder(0,
                 resources.getString(R.string.c_iwlan_exit_notification_negative_button),
                 pendingIntent).build();
