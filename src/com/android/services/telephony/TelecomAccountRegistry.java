@@ -81,6 +81,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -298,6 +299,14 @@ public class TelecomAccountRegistry {
                 return;
             }
             mMmTelManager.unregisterImsRegistrationCallback(mImsRegistrationCallback);
+        }
+
+        // UserHandle associated with a subiscription can change after PhoneAccount was created.
+        // Check if the account is having same UserHandle as the sub.
+        private boolean isSameUserHandle() {
+            UserHandle accountUserHandle = (getPhoneAccountHandle() != null) ?
+                    getPhoneAccountHandle().getUserHandle() : null;
+            return Objects.equals(accountUserHandle, mPhone.getUserHandle());
         }
 
         /**
@@ -1197,6 +1206,9 @@ public class TelecomAccountRegistry {
                     mSubscriptionManager.getActiveSubscriptionInfoList();
 
             boolean isTearingDownNeeded = subList == null;
+
+            isTearingDownNeeded |= hasAnyUserHandleChanged();
+
             if (!isTearingDownNeeded) {
                 int subAccountCnt = subList.size();
                 synchronized (mAccountsLock) {
@@ -2000,6 +2012,18 @@ public class TelecomAccountRegistry {
         // Invalidate the TelephonyManager cache which maps phone account handles to sub ids since
         // all the phone account handles are being recreated at this point.
         PropertyInvalidatedCache.invalidateCache(TelephonyManager.CACHE_KEY_PHONE_ACCOUNT_TO_SUBID);
+    }
+
+    private boolean hasAnyUserHandleChanged() {
+        synchronized (mAccountsLock) {
+            for (AccountEntry entry : mAccounts) {
+                if (!entry.isSameUserHandle()) {
+                    Log.i(this, "hasAnyUserHandleChanged: changed");
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean isAccountMatched(SubscriptionInfo info) {
