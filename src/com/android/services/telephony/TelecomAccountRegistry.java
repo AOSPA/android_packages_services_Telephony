@@ -81,6 +81,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -169,6 +170,7 @@ public class TelecomAccountRegistry {
         private boolean mIsUsingSimCallManager;
         private boolean mIsShowPreciseFailedCause;
         private final FeatureConnector<ImsManager> mImsManagerConnector;
+        private int mSubId;
 
         AccountEntry(Phone phone, boolean isEmergency, boolean isTest) {
             mPhone = phone;
@@ -176,8 +178,9 @@ public class TelecomAccountRegistry {
             mIsTestAccount = isTest;
             mIsAdhocConfCapable = mPhone.isImsRegistered();
             mAccount = registerPstnPhoneAccount(isEmergency, isTest);
-            Log.i(this, "Registered phoneAccount: %s with handle: %s",
-                    mAccount, mAccount.getAccountHandle());
+            mSubId = getSubId();
+            Log.i(this, "Registered phoneAccount: %s with handle: %s, subId: %d",
+                    mAccount, mAccount.getAccountHandle(), mSubId);
             mPhoneCapabilitiesNotifier = new PstnPhoneCapabilitiesNotifier((Phone) mPhone,
                     this);
             mImsManagerConnector = ImsManager.getConnector(
@@ -248,8 +251,8 @@ public class TelecomAccountRegistry {
             mImsManagerConnector.disconnect();
         }
 
-        private boolean isMatched(SubscriptionInfo subInfo) {
-            return mPhone.getSubId() == subInfo.getSubscriptionId();
+        private boolean isSameSubId(SubscriptionInfo subInfo) {
+            return mSubId == subInfo.getSubscriptionId();
         }
 
         private void registerMmTelCapabilityCallback() {
@@ -298,6 +301,14 @@ public class TelecomAccountRegistry {
                 return;
             }
             mMmTelManager.unregisterImsRegistrationCallback(mImsRegistrationCallback);
+        }
+
+        // UserHandle associated with a subiscription can change after PhoneAccount was created.
+        // Check if the account is having same UserHandle as the sub.
+        private boolean isSameUserHandle() {
+            UserHandle accountUserHandle = (getPhoneAccountHandle() != null) ?
+                    getPhoneAccountHandle().getUserHandle() : null;
+            return Objects.equals(accountUserHandle, mPhone.getUserHandle());
         }
 
         /**
@@ -1197,6 +1208,9 @@ public class TelecomAccountRegistry {
                     mSubscriptionManager.getActiveSubscriptionInfoList();
 
             boolean isTearingDownNeeded = subList == null;
+
+            isTearingDownNeeded |= hasAnyUserHandleChanged();
+
             if (!isTearingDownNeeded) {
                 int subAccountCnt = subList.size();
                 synchronized (mAccountsLock) {
@@ -2002,10 +2016,22 @@ public class TelecomAccountRegistry {
         PropertyInvalidatedCache.invalidateCache(TelephonyManager.CACHE_KEY_PHONE_ACCOUNT_TO_SUBID);
     }
 
+    private boolean hasAnyUserHandleChanged() {
+        synchronized (mAccountsLock) {
+            for (AccountEntry entry : mAccounts) {
+                if (!entry.isSameUserHandle()) {
+                    Log.i(this, "hasAnyUserHandleChanged: changed");
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean isAccountMatched(SubscriptionInfo info) {
         synchronized (mAccountsLock) {
             for (AccountEntry entry : mAccounts) {
-                if (entry.isMatched(info)) {
+                if (entry.isSameSubId(info)) {
                     return true;
                 }
             }
