@@ -1159,6 +1159,11 @@ public class ImsConference extends TelephonyConferenceBase implements Holdable {
                 if (oldParticipantCount != 1 && newParticipantCount == 1) {
                     // If number of participants goes to 1, emulate a single party call.
                     startEmulatingSinglePartyCall();
+                } else if (oldParticipantCount != 2 && newParticipantCount == 2 &&
+                        !mCarrierConfig.shouldFilterOutConferenceHost()) {
+                    // For some carriers which the conference host is not filtered out,
+                    // if number of participants goes to 2, emulate a single party call.
+                    startEmulatingSinglePartyCall();
                 } else if (!isMultiparty() && !isCepForSinglePartyConference) {
                     // Number of participants increased, so stop emulating a single party call.
                     stopEmulatingSinglePartyCall();
