@@ -202,7 +202,6 @@ import com.android.internal.telephony.ServiceStateTracker;
 import com.android.internal.telephony.SmsApplication;
 import com.android.internal.telephony.SmsController;
 import com.android.internal.telephony.SmsPermissions;
-import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.data.DataUtils;
@@ -411,7 +410,6 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private final UserManager mUserManager;
     private final AppOpsManager mAppOps;
     private final MainThreadHandler mMainThreadHandler;
-    private final SubscriptionController mSubscriptionController;
     private final SharedPreferences mTelephonySharedPreferences;
     private final PhoneConfigurationManager mPhoneConfigurationManager;
     private final RadioInterfaceCapabilityController mRadioInterfaceCapabilities;
@@ -2462,11 +2460,6 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         mUserManager = (UserManager) app.getSystemService(Context.USER_SERVICE);
         mAppOps = (AppOpsManager)app.getSystemService(Context.APP_OPS_SERVICE);
         mMainThreadHandler = new MainThreadHandler();
-        if (!PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-            mSubscriptionController = SubscriptionController.getInstance();
-        } else {
-            mSubscriptionController = null;
-        }
         mTelephonySharedPreferences = PreferenceManager.getDefaultSharedPreferences(mApp);
         mNetworkScanRequestTracker = new NetworkScanRequestTracker();
         mPhoneConfigurationManager = PhoneConfigurationManager.getInstance();
@@ -5500,11 +5493,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     private boolean isActiveSubscription(int subId) {
-        if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-            return getSubscriptionManagerService().isActiveSubId(subId,
-                    mApp.getOpPackageName(), mApp.getFeatureId());
-        }
-        return mSubscriptionController.isActiveSubId(subId);
+        return getSubscriptionManagerService().isActiveSubId(subId,
+                mApp.getOpPackageName(), mApp.getFeatureId());
     }
 
     /**
@@ -7466,16 +7456,9 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                 return null;
             }
 
-            ParcelUuid groupUuid;
-            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                final SubscriptionInfo info = getSubscriptionManagerService()
-                        .getSubscriptionInfo(subId);
-                groupUuid = info.getGroupUuid();
-            } else {
-                final SubscriptionInfo info = mSubscriptionController
-                        .getSubscriptionInfo(subId);
-                groupUuid = info.getGroupUuid();
-            }
+            final SubscriptionInfo info = getSubscriptionManagerService()
+                    .getSubscriptionInfo(subId);
+            ParcelUuid groupUuid = info.getGroupUuid();
             // If it doesn't belong to any group, return just subscriberId of itself.
             if (groupUuid == null) {
                 return new String[]{subscriberId};
@@ -7483,16 +7466,9 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
             // Get all subscriberIds from the group.
             final List<String> mergedSubscriberIds = new ArrayList<>();
-            List<SubscriptionInfo> groupInfos;
-            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                groupInfos = getSubscriptionManagerService()
-                        .getSubscriptionsInGroup(groupUuid, mApp.getOpPackageName(),
-                                mApp.getAttributionTag());
-            } else {
-                groupInfos = mSubscriptionController
-                        .getSubscriptionsInGroup(groupUuid, mApp.getOpPackageName(),
-                                mApp.getAttributionTag());
-            }
+            List<SubscriptionInfo> groupInfos = getSubscriptionManagerService()
+                    .getSubscriptionsInGroup(groupUuid, mApp.getOpPackageName(),
+                            mApp.getAttributionTag());
             for (SubscriptionInfo subInfo : groupInfos) {
                 subscriberId = telephonyManager.getSubscriberId(subInfo.getSubscriptionId());
                 if (subscriberId != null) {
@@ -8066,23 +8042,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         }
         final long identity = Binder.clearCallingIdentity();
         try {
-            SubscriptionInfo info;
-            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                info = getSubscriptionManagerService().getActiveSubscriptionInfo(subId,
-                        phone.getContext().getOpPackageName(),
-                        phone.getContext().getAttributionTag());
-                if (info == null) {
-                    log("getSimLocaleForSubscriber, inactive subId: " + subId);
-                    return null;
-                }
-            } else {
-                info = mSubscriptionController.getActiveSubscriptionInfo(subId,
-                        phone.getContext().getOpPackageName(),
-                        phone.getContext().getAttributionTag());
-                if (info == null) {
-                    log("getSimLocaleForSubscriber, inactive subId: " + subId);
-                    return null;
-                }
+            SubscriptionInfo info = getSubscriptionManagerService().getActiveSubscriptionInfo(subId,
+                    phone.getContext().getOpPackageName(),
+                    phone.getContext().getAttributionTag());
+            if (info == null) {
+                log("getSimLocaleForSubscriber, inactive subId: " + subId);
+                return null;
             }
             // Try and fetch the locale from the carrier properties or from the SIM language
             // preferences (EF-PL and EF-LI)...
@@ -8134,12 +8099,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      * NOTE: this method assumes permission checks are done and caller identity has been cleared.
      */
     private List<SubscriptionInfo> getActiveSubscriptionInfoListPrivileged() {
-        if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-            return getSubscriptionManagerService().getActiveSubscriptionInfoList(
-                    mApp.getOpPackageName(), mApp.getAttributionTag());
-        }
-        return mSubscriptionController.getActiveSubscriptionInfoList(mApp.getOpPackageName(),
-                mApp.getAttributionTag());
+        return getSubscriptionManagerService().getActiveSubscriptionInfoList(
+                mApp.getOpPackageName(), mApp.getAttributionTag());
     }
 
     private ActivityStatsTechSpecificInfo[] mLastModemActivitySpecificInfo = null;
@@ -8349,21 +8310,12 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                 .contains(callingPackage);
         try {
             // isActiveSubId requires READ_PHONE_STATE, which we already check for above
-            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                SubscriptionInfoInternal subInfo = getSubscriptionManagerService()
-                        .getSubscriptionInfoInternal(subId);
-                if (subInfo == null || !subInfo.isActive()) {
-                    Rlog.d(LOG_TAG, "getServiceStateForSubscriber returning null for inactive "
-                            + "subId=" + subId);
-                    return null;
-                }
-            } else {
-                if (!mSubscriptionController.isActiveSubId(subId, callingPackage,
-                        callingFeatureId)) {
-                    Rlog.d(LOG_TAG, "getServiceStateForSubscriber returning null for inactive "
-                            + "subId=" + subId);
-                    return null;
-                }
+            SubscriptionInfoInternal subInfo = getSubscriptionManagerService()
+                    .getSubscriptionInfoInternal(subId);
+            if (subInfo == null || !subInfo.isActive()) {
+                Rlog.d(LOG_TAG, "getServiceStateForSubscriber returning null for inactive "
+                        + "subId=" + subId);
+                return null;
             }
 
             ServiceState ss = phone.getServiceState();
