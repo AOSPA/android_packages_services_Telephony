@@ -68,7 +68,6 @@ import com.android.internal.telephony.PhoneConfigurationManager;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.RIL;
-import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.util.QtiImsUtils;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
 import com.android.phone.PhoneGlobals;
@@ -81,6 +80,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -169,6 +169,7 @@ public class TelecomAccountRegistry {
         private boolean mIsUsingSimCallManager;
         private boolean mIsShowPreciseFailedCause;
         private final FeatureConnector<ImsManager> mImsManagerConnector;
+        private int mSubId;
 
         AccountEntry(Phone phone, boolean isEmergency, boolean isTest) {
             mPhone = phone;
@@ -176,8 +177,9 @@ public class TelecomAccountRegistry {
             mIsTestAccount = isTest;
             mIsAdhocConfCapable = mPhone.isImsRegistered();
             mAccount = registerPstnPhoneAccount(isEmergency, isTest);
-            Log.i(this, "Registered phoneAccount: %s with handle: %s",
-                    mAccount, mAccount.getAccountHandle());
+            mSubId = getSubId();
+            Log.i(this, "Registered phoneAccount: %s with handle: %s, subId: %d",
+                    mAccount, mAccount.getAccountHandle(), mSubId);
             mPhoneCapabilitiesNotifier = new PstnPhoneCapabilitiesNotifier((Phone) mPhone,
                     this);
             mImsManagerConnector = ImsManager.getConnector(
@@ -248,8 +250,8 @@ public class TelecomAccountRegistry {
             mImsManagerConnector.disconnect();
         }
 
-        private boolean isMatched(SubscriptionInfo subInfo) {
-            return mPhone.getSubId() == subInfo.getSubscriptionId();
+        private boolean isSameSubId(SubscriptionInfo subInfo) {
+            return mSubId == subInfo.getSubscriptionId();
         }
 
         private void registerMmTelCapabilityCallback() {
@@ -298,6 +300,14 @@ public class TelecomAccountRegistry {
                 return;
             }
             mMmTelManager.unregisterImsRegistrationCallback(mImsRegistrationCallback);
+        }
+
+        // UserHandle associated with a subiscription can change after PhoneAccount was created.
+        // Check if the account is having same UserHandle as the sub.
+        private boolean isSameUserHandle() {
+            UserHandle accountUserHandle = (getPhoneAccountHandle() != null) ?
+                    getPhoneAccountHandle().getUserHandle() : null;
+            return Objects.equals(accountUserHandle, mPhone.getUserHandle());
         }
 
         /**
@@ -596,38 +606,22 @@ public class TelecomAccountRegistry {
                 return false;
             }
 
-            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                if (SubscriptionManagerService.getInstance() == null) {
-                    Log.d(this,
-                            "isEmergencyPreferredAccount: SubscriptionManagerService not "
-                                    + "available.");
-                    return false;
-                }
-                // Only set an emergency preference on devices with multiple active subscriptions
-                // (include opportunistic subscriptions) in this check.
-                // API says never null, but this can return null in testing.
-                int[] activeSubIds = SubscriptionManagerService.getInstance()
-                        .getActiveSubIdList(false);
-                if (activeSubIds == null || activeSubIds.length <= 1) {
-                    Log.d(this, "isEmergencyPreferredAccount: one or less active subscriptions.");
-                    return false;
-                }
-            } else {
-                SubscriptionController controller = SubscriptionController.getInstance();
-                if (controller == null) {
-                    Log.d(this,
-                            "isEmergencyPreferredAccount: SubscriptionController not available.");
-                    return false;
-                }
-                // Only set an emergency preference on devices with multiple active subscriptions
-                // (include opportunistic subscriptions) in this check.
-                // API says never null, but this can return null in testing.
-                int[] activeSubIds = controller.getActiveSubIdList(false);
-                if (activeSubIds == null || activeSubIds.length <= 1) {
-                    Log.d(this, "isEmergencyPreferredAccount: one or less active subscriptions.");
-                    return false;
-                }
+            if (SubscriptionManagerService.getInstance() == null) {
+                Log.d(this,
+                        "isEmergencyPreferredAccount: SubscriptionManagerService not "
+                                + "available.");
+                return false;
             }
+            // Only set an emergency preference on devices with multiple active subscriptions
+            // (include opportunistic subscriptions) in this check.
+            // API says never null, but this can return null in testing.
+            int[] activeSubIds = SubscriptionManagerService.getInstance()
+                    .getActiveSubIdList(false);
+            if (activeSubIds == null || activeSubIds.length <= 1) {
+                Log.d(this, "isEmergencyPreferredAccount: one or less active subscriptions.");
+                return false;
+            }
+
             // Check to see if this PhoneAccount is associated with the default Data subscription.
             if (!SubscriptionManager.isValidSubscriptionId(subId)) {
                 Log.d(this, "isEmergencyPreferredAccount: provided subId " + subId + "is not "
@@ -637,17 +631,10 @@ public class TelecomAccountRegistry {
             int userDefaultData = SubscriptionManager.getDefaultDataSubscriptionId();
             boolean isActiveDataValid = SubscriptionManager.isValidSubscriptionId(activeDataSubId);
 
-            boolean isActiveDataOpportunistic;
-            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                SubscriptionInfo subInfo;
-                subInfo = SubscriptionManagerService.getInstance()
-                        .getSubscriptionInfo(activeDataSubId);
-                isActiveDataOpportunistic = isActiveDataValid && subInfo != null
-                        && subInfo.isOpportunistic();
-            } else {
-                isActiveDataOpportunistic = isActiveDataValid
-                        && SubscriptionController.getInstance().isOpportunistic(activeDataSubId);
-            }
+            SubscriptionInfo subInfo = SubscriptionManagerService.getInstance()
+                    .getSubscriptionInfo(activeDataSubId);
+            boolean isActiveDataOpportunistic = isActiveDataValid && subInfo != null
+                    && subInfo.isOpportunistic();
 
             // compare the activeDataSubId to the subId specified only if it is valid and not an
             // opportunistic subscription (only supports data). If not, use the current default
@@ -1197,6 +1184,9 @@ public class TelecomAccountRegistry {
                     mSubscriptionManager.getActiveSubscriptionInfoList();
 
             boolean isTearingDownNeeded = subList == null;
+
+            isTearingDownNeeded |= hasAnyUserHandleChanged();
+
             if (!isTearingDownNeeded) {
                 int subAccountCnt = subList.size();
                 synchronized (mAccountsLock) {
@@ -1904,6 +1894,7 @@ public class TelecomAccountRegistry {
         }
     }
 
+    // FIXME
     private boolean isSubIdCreationPending() {
         Log.i(this, "isSubIdCreationPending");
 
@@ -2002,10 +1993,22 @@ public class TelecomAccountRegistry {
         PropertyInvalidatedCache.invalidateCache(TelephonyManager.CACHE_KEY_PHONE_ACCOUNT_TO_SUBID);
     }
 
+    private boolean hasAnyUserHandleChanged() {
+        synchronized (mAccountsLock) {
+            for (AccountEntry entry : mAccounts) {
+                if (!entry.isSameUserHandle()) {
+                    Log.i(this, "hasAnyUserHandleChanged: changed");
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean isAccountMatched(SubscriptionInfo info) {
         synchronized (mAccountsLock) {
             for (AccountEntry entry : mAccounts) {
-                if (entry.isMatched(info)) {
+                if (entry.isSameSubId(info)) {
                     return true;
                 }
             }

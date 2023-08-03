@@ -74,7 +74,6 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.RIL;
-import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.d2d.Communicator;
 import com.android.internal.telephony.data.PhoneSwitcher;
 import com.android.internal.telephony.domainselection.DomainSelectionConnection;
@@ -990,7 +989,7 @@ public class TelephonyConnectionService extends ConnectionService {
             new TelephonyConferenceBase.TelephonyConferenceListener() {
         @Override
         public void onConferenceMembershipChanged(Connection connection) {
-            mHoldTracker.updateHoldCapability();
+            mHoldTracker.updateHoldCapability(connection.getPhoneAccountHandle());
         }
     };
 
@@ -1485,27 +1484,15 @@ public class TelephonyConnectionService extends ConnectionService {
                                 || (phone.getServiceStateTracker().isRadioOn()
                                 && !mSatelliteController.isSatelliteEnabled());
                     } else {
-                        if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                            SubscriptionInfoInternal subInfo = SubscriptionManagerService
-                                    .getInstance().getSubscriptionInfoInternal(phone.getSubId());
-                            // Wait until we are in service and ready to make calls. This can happen
-                            // when we power down the radio on bluetooth to save power on watches or
-                            // if it is a test emergency number and we have to wait for the device
-                            // to move IN_SERVICE before the call can take place over normal
-                            // routing.
-                            return (phone.getState() == PhoneConstants.State.OFFHOOK)
-                                    // Do not wait for voice in service on opportunistic SIMs.
-                                    || (subInfo != null && subInfo.isOpportunistic())
-                                    || serviceState == ServiceState.STATE_IN_SERVICE;
-                        }
+                        SubscriptionInfoInternal subInfo = SubscriptionManagerService
+                                .getInstance().getSubscriptionInfoInternal(phone.getSubId());
                         // Wait until we are in service and ready to make calls. This can happen
                         // when we power down the radio on bluetooth to save power on watches or if
                         // it is a test emergency number and we have to wait for the device to move
                         // IN_SERVICE before the call can take place over normal routing.
                         return phone.getState() == PhoneConstants.State.OFFHOOK
                                 // Do not wait for voice in service on opportunistic SIMs.
-                                || SubscriptionController.getInstance().isOpportunistic(
-                                        phone.getSubId())
+                                || (subInfo != null && subInfo.isOpportunistic())
                                 || (serviceState == ServiceState.STATE_IN_SERVICE
                                 && !isSatelliteBlockingCall(isEmergencyNumber));
                     }
@@ -1760,16 +1747,9 @@ public class TelephonyConnectionService extends ConnectionService {
             // Notify Telecom of the new Connection type.
             // TODO: Switch out the underlying connection instead of creating a new
             // one and causing UI Jank.
-            boolean noActiveSimCard;
-            if (PhoneFactory.isSubscriptionManagerServiceEnabled()) {
-                noActiveSimCard = SubscriptionManagerService.getInstance()
-                        .getActiveSubInfoCount(phone.getContext().getOpPackageName(),
-                                phone.getContext().getAttributionTag()) == 0;
-            } else {
-                noActiveSimCard = SubscriptionController.getInstance()
-                        .getActiveSubInfoCount(phone.getContext().getOpPackageName(),
-                                phone.getContext().getAttributionTag()) == 0;
-            }
+            boolean noActiveSimCard = SubscriptionManagerService.getInstance()
+                    .getActiveSubInfoCount(phone.getContext().getOpPackageName(),
+                            phone.getContext().getAttributionTag()) == 0;
             // If there's no active sim card and the device is in emergency mode, use E account.
             addExistingConnection(mPhoneUtilsProxy.makePstnPhoneAccountHandleWithPrefix(
                     phone, "", isEmergencyNumber && noActiveSimCard), repConnection);
@@ -2616,28 +2596,29 @@ public class TelephonyConnectionService extends ConnectionService {
     @Override
     public void onConnectionAdded(Connection connection) {
         if (connection instanceof Holdable && !isExternalConnection(connection)) {
-            mHoldTracker.addHoldable((Holdable) connection);
+            mHoldTracker.addHoldable(
+                    connection.getPhoneAccountHandle(), (Holdable) connection);
         }
     }
 
     @Override
     public void onConnectionRemoved(Connection connection) {
         if (connection instanceof Holdable && !isExternalConnection(connection)) {
-            mHoldTracker.removeHoldable((Holdable) connection);
+            mHoldTracker.removeHoldable(connection.getPhoneAccountHandle(), (Holdable) connection);
         }
     }
 
     @Override
     public void onConferenceAdded(Conference conference) {
         if (conference instanceof Holdable) {
-            mHoldTracker.addHoldable((Holdable) conference);
+            mHoldTracker.addHoldable(conference.getPhoneAccountHandle(), (Holdable) conference);
         }
     }
 
     @Override
     public void onConferenceRemoved(Conference conference) {
         if (conference instanceof Holdable) {
-            mHoldTracker.removeHoldable((Holdable) conference);
+            mHoldTracker.removeHoldable(conference.getPhoneAccountHandle(), (Holdable) conference);
         }
     }
 
