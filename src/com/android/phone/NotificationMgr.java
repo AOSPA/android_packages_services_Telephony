@@ -102,7 +102,6 @@ public class NotificationMgr {
     static final int DATA_ROAMING_NOTIFICATION = 5;
     static final int SELECTED_OPERATOR_FAIL_NOTIFICATION = 6;
     static final int LIMITED_SIM_FUNCTION_NOTIFICATION = 7;
-    static final int BACKUP_CALLING_NOTIFICATION = 8;
 
     // Event for network selection notification.
     private static final int EVENT_PENDING_NETWORK_SELECTION_NOTIFICATION = 1;
@@ -759,14 +758,6 @@ public class NotificationMgr {
             }
             return false;
         });
-    }
-
-    /**
-     * Dismiss the "Backup Calling" notification for the given phoneId
-     */
-    public void dismissBackupCallingNotification(int phoneId) {
-        log("dismissBackupCallingNotification phoneId = " + phoneId);
-        cancelAsUser(Integer.toString(phoneId), BACKUP_CALLING_NOTIFICATION, UserHandle.ALL);
     }
 
     /**
