@@ -29,7 +29,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.XmlResourceParser;
-import android.database.ContentObserver;
 import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.Uri;
@@ -46,8 +45,6 @@ import android.telecom.TelecomManager;
 import android.telephony.AccessNetworkConstants;
 import android.telephony.AnomalyReporter;
 import android.telephony.CarrierConfigManager;
-import android.telephony.ims.ImsException;
-import android.telephony.ims.ImsMmTelManager;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
@@ -93,7 +90,6 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.lang.NumberFormatException;
 import java.util.List;
 
 /**
@@ -137,7 +133,6 @@ public class PhoneGlobals extends ContextWrapper {
     private static final int EVENT_CARRIER_CONFIG_CHANGED = 17;
     private static final int EVENT_MULTI_SIM_CONFIG_CHANGED = 18;
     private static final int EVENT_DATA_CONNECTION_ATTACHED = 19;
-    private static final int EVENT_BACKUP_CALLING_SETTING_CHANGED = 20;
 
     // The MMI codes are also used by the InCallScreen.
     public static final int MMI_INITIATE = 51;
@@ -227,8 +222,6 @@ public class PhoneGlobals extends ContextWrapper {
 
     private final SettingsObserver mSettingsObserver;
     private BinderCallsStats.SettingsObserver mBinderCallsSettingsObserver;
-
-    private final BackupCallingSettingObserver mBackupCallingSettingObserver;
 
     // Mapping of phone ID to the associated TelephonyCallback. These should be registered without
     // fine or coarse location since we only use ServiceState for
@@ -424,10 +417,6 @@ public class PhoneGlobals extends ContextWrapper {
                         mTelephonyCallbacks[phoneId] = callback;
                     }
                     break;
-                case EVENT_BACKUP_CALLING_SETTING_CHANGED:
-                    Log.d(LOG_TAG, "EVENT_BACKUP_CALLING_SETTING_CHANGED");
-                    notificationMgr.dismissBackupCallingNotification(msg.arg1);
-                    break;
             }
         }
     };
@@ -436,7 +425,6 @@ public class PhoneGlobals extends ContextWrapper {
         super(context);
         sMe = this;
         mSettingsObserver = new SettingsObserver(context, mHandler);
-        mBackupCallingSettingObserver = new BackupCallingSettingObserver();
     }
 
     public void onCreate() {
@@ -688,22 +676,6 @@ public class PhoneGlobals extends ContextWrapper {
             }
         }
 
-        // Unregistering first to avoid multiple registration as registerSettingsObserver() can be
-        // called multiple times.
-        cr.unregisterContentObserver(mBackupCallingSettingObserver);
-        // Listen for backup calling setting changes
-        SubscriptionManager subMgr = (SubscriptionManager) getSystemService(
-                Context.TELEPHONY_SUBSCRIPTION_SERVICE);
-        List<SubscriptionInfo> subList = subMgr.getActiveSubscriptionInfoList(true);
-        if (subList != null) {
-            for (SubscriptionInfo info : subList) {
-                int subId = info.getSubscriptionId();
-                Uri uri = Uri.withAppendedPath(SubscriptionManager.CROSS_SIM_ENABLED_CONTENT_URI,
-                        String.valueOf(subId));
-                cr.registerContentObserver(uri, false, mBackupCallingSettingObserver);
-            }
-        }
-
         // Listen for user data roaming setting changed event
         mSettingsObserver.observe(Settings.Global.getUriFor(dataRoamingSetting),
                 EVENT_DATA_ROAMING_SETTINGS_CHANGED);
@@ -711,47 +683,6 @@ public class PhoneGlobals extends ContextWrapper {
         // Listen for mobile data setting changed event
         mSettingsObserver.observe(Settings.Global.getUriFor(mobileDataSetting),
                 EVENT_MOBILE_DATA_SETTINGS_CHANGED);
-    }
-
-
-    private class BackupCallingSettingObserver extends ContentObserver {
-        BackupCallingSettingObserver() {
-            super(null);
-        }
-
-        @Override
-        public void onChange(boolean selfChange, Uri uri) {
-            if (uri == null) {
-                Log.e(LOG_TAG, "Uri null");
-                return;
-            }
-            int subId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
-            try {
-                subId = Integer.parseInt(uri.getLastPathSegment());
-            } catch (NumberFormatException ex) {
-                Log.e(LOG_TAG, "Uri's last segment not a number");
-                return;
-            }
-            ImsMmTelManager imsMmTelMgr = getImsMmTelManager(subId);
-            try {
-                if (!imsMmTelMgr.isCrossSimCallingEnabled()) {
-                    Log.d(LOG_TAG, "Backup calling disabled on sub " + subId);
-                    mHandler.obtainMessage(EVENT_BACKUP_CALLING_SETTING_CHANGED,
-                            SubscriptionManager.getSlotIndex(subId),
-                            -1 /* Not used */).sendToTarget();
-                }
-            } catch (ImsException ex) {
-                Log.e(LOG_TAG, "Failed to get backup calling status", ex);
-            }
-        }
-    }
-
-    private static ImsMmTelManager getImsMmTelManager(int subId) {
-        if (!SubscriptionManager.isValidSubscriptionId(subId)) {
-            Log.e(LOG_TAG, "subId invalid");
-            return null;
-        }
-        return ImsMmTelManager.createForSubscriptionId(subId);
     }
 
     /**
